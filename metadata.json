@@ -1,0 +1,6 @@
+{
+  "name": "GMR Luxury Co-Living PG",
+  "description": "A comprehensive personal PG management software for GMR Luxury Co-Living PG, tracking resident admissions, payment histories, printing receipts, and broadcasting announcements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
