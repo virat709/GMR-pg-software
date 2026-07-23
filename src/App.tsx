@@ -200,7 +200,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans flex flex-col md:flex-row relative transition-colors duration-300 theme-${theme}`}>
+    <div className={`h-screen w-full font-sans flex flex-col md:flex-row overflow-hidden relative transition-colors duration-300 theme-${theme}`}>
       
       {/* Toast Overlay Notice Banner */}
       <AnimatePresence>
@@ -229,7 +229,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* LEFT SIDEBAR: Desktop Layout (Hidden on printing) */}
-      <aside className="hidden md:flex flex-col w-64 bg-neutral-900 text-neutral-300 border-r border-neutral-800 shrink-0 select-none print:hidden" id="desktop-sidebar">
+      <aside className="hidden md:flex flex-col w-64 h-full overflow-y-auto bg-neutral-900 text-neutral-300 border-r border-neutral-800 shrink-0 select-none print:hidden" id="desktop-sidebar">
         {/* Branding header */}
         <div className="p-6 border-b border-neutral-800 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm p-1 shrink-0">
@@ -433,16 +433,17 @@ export default function App() {
       </AnimatePresence>
 
       {/* MAIN VIEWPORT BODY */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full" id="main-content-viewport">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25 }}
-            className="w-full h-full"
-          >
+      <main className="flex-1 h-full overflow-y-auto p-4 md:p-8 w-full" id="main-content-viewport">
+        <div className="max-w-7xl mx-auto w-full min-h-full pb-10">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+              className="w-full h-full"
+            >
             {activeTab === 'dashboard' && (
               <DashboardOverview 
                 tenants={tenants}
@@ -486,6 +487,7 @@ export default function App() {
             )}
           </motion.div>
         </AnimatePresence>
+        </div>
       </main>
 
     </div>

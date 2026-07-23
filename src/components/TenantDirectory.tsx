@@ -385,7 +385,7 @@ export default function TenantDirectory({
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col h-full sticky top-4"
+            className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col h-full sticky top-0"
           >
             {/* Detail Header */}
             <div className="bg-neutral-50 p-5 border-b border-neutral-200 flex items-start justify-between">
