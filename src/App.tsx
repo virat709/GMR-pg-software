@@ -9,30 +9,67 @@ import {
   LayoutDashboard, 
   Users, 
   IndianRupee, 
-  Megaphone, 
   Building, 
   Bell, 
   CheckCircle, 
   Menu, 
   X,
-  CreditCard,
-  PhoneCall,
-  UserCheck,
   Sun,
-  Moon
+  Moon,
+  Building2,
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
-import { Tenant, PaymentLog, Announcement, BillingAlert } from './types';
-import { initialTenants, initialPayments, initialAnnouncements } from './mockData';
+import { Tenant, PaymentLog, BillingAlert, Property, UserRole } from './types';
+import { initialTenants, initialPayments, initialProperties } from './mockData';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
+import {
+  subscribeProperties,
+  subscribeTenants,
+  subscribePayments,
+  savePropertyInDb,
+  saveTenantInDb,
+  updateTenantInDb,
+  savePaymentInDb,
+  purgeAllDummyData
+} from './lib/firestoreService';
 
 // Component imports
 import DashboardOverview from './components/DashboardOverview';
 import TenantDirectory from './components/TenantDirectory';
 import BillingManager from './components/BillingManager';
-import AnnouncementCenter from './components/AnnouncementCenter';
+import PinLockModal from './components/PinLockModal';
 
 export default function App() {
+  // Security PIN Lock State & Role Access
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('gmr_unlocked') === 'true';
+  });
+  const [userRole, setUserRole] = useState<UserRole | null>(() => {
+    return (sessionStorage.getItem('gmr_user_role') as UserRole) || null;
+  });
+  const [showChangePinModal, setShowChangePinModal] = useState<boolean>(false);
+
+  const handleUnlock = (role: UserRole) => {
+    setIsUnlocked(true);
+    setUserRole(role);
+    sessionStorage.setItem('gmr_unlocked', 'true');
+    sessionStorage.setItem('gmr_user_role', role);
+  };
+
+  const handleLock = () => {
+    setIsUnlocked(false);
+    setUserRole(null);
+    sessionStorage.removeItem('gmr_unlocked');
+    sessionStorage.removeItem('gmr_user_role');
+    showToast('Portal locked! Enter security PIN to unlock.', 'info');
+  };
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'billing' | 'announcements'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'billing'>('dashboard');
   
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -48,47 +85,50 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Core Data States
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   // Notification Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'info'>('success');
 
-  // Load from LocalStorage on mount
+  // Firebase Auth listener (silent fallback if anonymous sign-in is disabled in project console)
+  const [_authUser, setAuthUser] = useState<User | null>(null);
+
   useEffect(() => {
-    const savedTenants = localStorage.getItem('pg_tenants');
-    const savedPayments = localStorage.getItem('pg_payments');
-    const savedAnnouncements = localStorage.getItem('pg_announcements');
-
-    if (savedTenants) {
-      setTenants(JSON.parse(savedTenants));
-    } else {
-      setTenants(initialTenants);
-      localStorage.setItem('pg_tenants', JSON.stringify(initialTenants));
-    }
-
-    if (savedPayments) {
-      setPayments(JSON.parse(savedPayments));
-    } else {
-      setPayments(initialPayments);
-      localStorage.setItem('pg_payments', JSON.stringify(initialPayments));
-    }
-
-    if (savedAnnouncements) {
-      setAnnouncements(JSON.parse(savedAnnouncements));
-    } else {
-      setAnnouncements(initialAnnouncements);
-      localStorage.setItem('pg_announcements', JSON.stringify(initialAnnouncements));
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setAuthUser(currentUser);
+      } else {
+        try {
+          const userCred = await signInAnonymously(auth);
+          setAuthUser(userCred.user);
+        } catch {
+          // Anonymous auth not enabled in Firebase Console; proceeding with database access
+        }
+      }
+    });
+    return () => unsubscribeAuth();
   }, []);
 
-  // Save changes to LocalStorage helper
-  const saveToStorage = (key: 'pg_tenants' | 'pg_payments' | 'pg_announcements', data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  };
+  // Subscribe to Cloud Firestore database on mount
+  useEffect(() => {
+    // Purge dummy data so only main branch property remains
+    purgeAllDummyData();
+
+    const unsubProp = subscribeProperties((data) => setProperties(data));
+    const unsubTenant = subscribeTenants((data) => setTenants(data));
+    const unsubPay = subscribePayments((data) => setPayments(data));
+
+    return () => {
+      unsubProp();
+      unsubTenant();
+      unsubPay();
+    };
+  }, []);
 
   // Toast Trigger Helper
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
@@ -99,84 +139,68 @@ export default function App() {
     }, 4000);
   };
 
-  // 1. Tenant Handlers
-  const handleAddTenant = (newTenantData: Omit<Tenant, 'id'>) => {
+  // Property Handlers
+  const handleAddProperty = async (newPropData: Omit<Property, 'id'>) => {
+    const newProperty: Property = {
+      ...newPropData,
+      id: 'prop_' + Math.random().toString(36).substring(2, 9),
+    };
+    await savePropertyInDb(newProperty);
+    showToast(`Registered PG Branch "${newProperty.name}" in Database!`, 'success');
+  };
+
+  // Tenant Handlers
+  const handleAddTenant = async (newTenantData: Omit<Tenant, 'id'>) => {
     const newTenant: Tenant = {
       ...newTenantData,
       id: 'tenant_' + Math.random().toString(36).substring(2, 9),
     };
-    const updated = [newTenant, ...tenants];
-    setTenants(updated);
-    saveToStorage('pg_tenants', updated);
-    showToast(`Resident ${newTenant.name} registered successfully!`, 'success');
+    await saveTenantInDb(newTenant);
+    showToast(`Resident ${newTenant.name} registered in Database!`, 'success');
   };
 
-  const handleEditTenant = (updatedTenant: Tenant) => {
-    const updated = tenants.map(t => t.id === updatedTenant.id ? updatedTenant : t);
-    setTenants(updated);
-    saveToStorage('pg_tenants', updated);
-    showToast(`Resident ${updatedTenant.name}'s profile updated!`, 'success');
+  const handleEditTenant = async (updatedTenant: Tenant) => {
+    await saveTenantInDb(updatedTenant);
+    showToast(`Resident ${updatedTenant.name}'s profile updated in Database!`, 'success');
   };
 
-  const handleCheckOutTenant = (tenantId: string) => {
+  const handleCheckOutTenant = async (tenantId: string) => {
     const tenantName = tenants.find(t => t.id === tenantId)?.name || 'Resident';
     const checkOutDate = new Date().toISOString().split('T')[0];
-    const updated = tenants.map(t => 
-      t.id === tenantId 
-        ? { ...t, status: 'CheckedOut' as const, checkOutDate } 
-        : t
-    );
-    setTenants(updated);
-    saveToStorage('pg_tenants', updated);
-    showToast(`Resident ${tenantName} checked out of PG!`, 'info');
+    await updateTenantInDb(tenantId, { status: 'CheckedOut', checkOutDate });
+    showToast(`Resident ${tenantName} checked out! Database updated.`, 'info');
   };
 
-  // 2. Payment Handlers
-  const handleAddPayment = (newPaymentData: Omit<PaymentLog, 'id'>) => {
+  // Payment Handlers
+  const handleAddPayment = async (newPaymentData: Omit<PaymentLog, 'id'>) => {
     const newPayment: PaymentLog = {
       ...newPaymentData,
       id: 'pay_' + Math.random().toString(36).substring(2, 9),
     };
-    const updated = [newPayment, ...payments];
-    setPayments(updated);
-    saveToStorage('pg_payments', updated);
+    await savePaymentInDb(newPayment);
     
     // Get tenant name for toast
     const name = tenants.find(t => t.id === newPaymentData.tenantId)?.name || 'Resident';
-    showToast(`Collected ₹${newPayment.amount} from ${name}!`, 'success');
+    showToast(`Collected ₹${newPayment.amount} from ${name}! Saved to Cloud Database.`, 'success');
   };
 
-  // 3. Announcement Handlers
-  const handleAddAnnouncement = (newAnnData: Omit<Announcement, 'id'>) => {
-    const newAnn: Announcement = {
-      ...newAnnData,
-      id: 'ann_' + Math.random().toString(36).substring(2, 9),
-    };
-    const updated = [newAnn, ...announcements];
-    setAnnouncements(updated);
-    saveToStorage('pg_announcements', updated);
-  };
-
-  // 4. Send Custom Billing Alert (WhatsApp/Push notification simulator)
+  // Send Custom Billing Alert
   const handleSendBillingAlert = (alert: BillingAlert) => {
     showToast(`Sent monthly billing alert push notification to ${alert.tenantName}'s device successfully!`, 'success');
   };
 
-  // Dynamically calculate Billing Alerts based on active tenants
-  // Billing cycle month is July 2026 ('2026-07')
+  // Dynamically calculate Billing Alerts based on active tenants for July 2026 ('2026-07')
   const currentMonth = '2026-07';
   const billingAlerts: BillingAlert[] = tenants
     .filter(t => t.status === 'Active')
     .map(tenant => {
-      // Check if tenant paid this month
       const hasPaid = payments.some(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
-      
-      // Assume standard rent due date is 5th of current month
       const dueDate = '2026-07-05';
-      const status = hasPaid ? 'Paid' : 'Overdue'; // July 21 is past due date, so overdue
+      const status = hasPaid ? 'Paid' : 'Overdue';
       
       return {
         tenantId: tenant.id,
+        propertyId: tenant.propertyId,
         tenantName: tenant.name,
         roomNumber: tenant.roomNumber,
         rentAmount: tenant.rentAmount,
@@ -188,10 +212,9 @@ export default function App() {
 
   // Sidebar navigation options
   const navItems = [
-    { id: 'dashboard' as const, label: 'Overview', icon: LayoutDashboard },
+    { id: 'dashboard' as const, label: 'Properties Overview', icon: LayoutDashboard },
     { id: 'tenants' as const, label: 'Residents Directory', icon: Users },
     { id: 'billing' as const, label: 'Billing & Receipts', icon: IndianRupee },
-    { id: 'announcements' as const, label: 'Urgent Notices', icon: Megaphone },
   ];
 
   const handleSelectTenantFromDashboard = (tenantId: string) => {
@@ -202,6 +225,17 @@ export default function App() {
   return (
     <div className={`h-screen w-full font-sans flex flex-col md:flex-row overflow-hidden relative transition-colors duration-300 theme-${theme}`}>
       
+      {/* SECURITY PIN LOCK SYSTEM OVERLAY & PIN MODAL */}
+      <PinLockModal 
+        isUnlocked={isUnlocked}
+        userRole={userRole}
+        onUnlock={handleUnlock}
+        onLock={handleLock}
+        showChangePinModal={showChangePinModal}
+        onCloseChangePinModal={() => setShowChangePinModal(false)}
+        showToast={showToast}
+      />
+
       {/* Toast Overlay Notice Banner */}
       <AnimatePresence>
         {toastMessage && (
@@ -212,15 +246,11 @@ export default function App() {
             className="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-auto print:hidden"
             id="toast-notification-overlay"
           >
-            <div className={`px-5 py-3 rounded-xl border shadow-lg flex items-center gap-2 text-sm font-semibold whitespace-nowrap ${
-              toastType === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                : 'bg-blue-50 text-blue-800 border-blue-200'
-            }`}>
+            <div className="px-5 py-3 rounded-xl border shadow-lg flex items-center gap-2 text-sm font-semibold whitespace-nowrap bg-emerald-50 text-emerald-800 border-emerald-200">
               {toastType === 'success' ? (
                 <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
-                <Bell className="w-4 h-4 text-blue-600 shrink-0" />
+                <Bell className="w-4 h-4 text-emerald-600 shrink-0" />
               )}
               <span>{toastMessage}</span>
             </div>
@@ -233,7 +263,7 @@ export default function App() {
         {/* Branding header */}
         <div className="p-6 border-b border-neutral-800 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm p-1 shrink-0">
-            <svg viewBox="0 0 100 100" className="w-8 h-8 text-[#0b75c8]" fill="currentColor">
+            <svg viewBox="0 0 100 100" className="w-8 h-8 text-[#16a34a]" fill="currentColor">
               <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" fill="currentColor" />
               <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" fill="currentColor" />
               <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" fill="currentColor" />
@@ -250,8 +280,44 @@ export default function App() {
               <h1 className="font-extrabold text-white text-sm tracking-wide">GMR</h1>
               <span className="bg-[#e6df15] text-neutral-950 font-black text-[9px] px-1.5 py-0.5 rounded-sm select-none">PG</span>
             </div>
-            <p className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase">Luxury Co-Living</p>
+            <p className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase">Multi-Property System</p>
           </div>
+        </div>
+
+        {/* Active Role Access Badge */}
+        <div className="px-4 py-2.5 bg-neutral-950/60 border-b border-neutral-800 flex items-center justify-between text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Access Mode</span>
+          {userRole === 'super_admin' ? (
+            <span className="bg-amber-500/10 border border-amber-500/30 text-amber-300 font-extrabold text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1" title="Super Access: Full system control">
+              <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
+              <span>Super Access</span>
+            </span>
+          ) : (
+            <span className="bg-blue-500/10 border border-blue-500/30 text-blue-300 font-extrabold text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1" title="Manager Access: Limited operational mode">
+              <UserCheck className="w-3 h-3 text-blue-400 shrink-0" />
+              <span>Limited Manager</span>
+            </span>
+          )}
+        </div>
+
+        {/* Property Switcher in Sidebar */}
+        <div className="px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/40">
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+            <Building2 className="w-3 h-3" />
+            <span>Active Branch</span>
+          </label>
+          <select
+            value={selectedPropertyId}
+            onChange={(e) => setSelectedPropertyId(e.target.value)}
+            className="w-full bg-neutral-800 text-white text-xs font-semibold rounded-xl px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-500 cursor-pointer"
+          >
+            <option value="all">🏢 All Properties ({properties.length})</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.id}>
+                🏢 {p.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Navigation lists */}
@@ -280,21 +346,47 @@ export default function App() {
           })}
         </nav>
 
+        {/* Security PIN Controls Section */}
+        <div className="px-4 py-3 border-t border-neutral-800 space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-1">
+            <span>Security PIN</span>
+            <span className="text-emerald-400 font-mono">Active</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => setShowChangePinModal(true)}
+              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700/70 rounded-xl py-2 px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              title="Change 4-digit Master Security PIN"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+              <span>Set PIN</span>
+            </button>
+            <button
+              onClick={handleLock}
+              className="bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-800/50 rounded-xl py-2 px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              title="Lock Manager Portal"
+            >
+              <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span>Lock</span>
+            </button>
+          </div>
+        </div>
+
         {/* Theme Switcher Toggle section */}
-        <div className="px-5 py-3.5 border-t border-neutral-800 flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-neutral-800 flex items-center justify-between">
           <span className="text-[11px] font-bold text-neutral-400 tracking-wider uppercase">Late-Night Mode</span>
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
               theme === 'dark' 
-                ? 'bg-blue-900/40 text-blue-200 border border-blue-800/60' 
+                ? 'bg-emerald-950/40 text-emerald-200 border border-emerald-800/60' 
                 : 'bg-white/10 text-white hover:bg-white/20'
             }`}
             title="Toggle Light/Dark Theme"
           >
             {theme === 'dark' ? (
               <>
-                <Moon className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <Moon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>Dark</span>
               </>
             ) : (
@@ -309,7 +401,7 @@ export default function App() {
         {/* Footer info */}
         <div className="p-5 border-t border-neutral-800 text-[10px] text-neutral-500 font-semibold">
           <p>© 2026 GMR Luxury Co-Living PG</p>
-          <p className="text-[9px] mt-0.5">Management Portal v1.4</p>
+          <p className="text-[9px] mt-0.5">Multi-Property Suite v2.0</p>
         </div>
       </aside>
 
@@ -317,7 +409,7 @@ export default function App() {
       <header className="md:hidden bg-neutral-900 text-neutral-300 border-b border-neutral-800 px-4 py-3.5 flex items-center justify-between z-40 print:hidden select-none" id="mobile-header">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-0.5">
-            <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#0b75c8]" fill="currentColor">
+            <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#16a34a]" fill="currentColor">
               <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" />
               <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" />
               <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" />
@@ -337,11 +429,18 @@ export default function App() {
 
         <div className="flex items-center gap-2">
           <button 
+            onClick={handleLock}
+            className="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 rounded-xl cursor-pointer transition-all duration-200"
+            title="Lock Portal"
+          >
+            <Lock className="w-4.5 h-4.5 text-red-400" />
+          </button>
+          <button 
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className="p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl cursor-pointer transition-all duration-200"
             title="Toggle Light/Dark Theme"
           >
-            {theme === 'light' ? <Moon className="w-4.5 h-4.5 text-blue-400" /> : <Sun className="w-4.5 h-4.5 text-yellow-400" />}
+            {theme === 'light' ? <Moon className="w-4.5 h-4.5 text-emerald-400" /> : <Sun className="w-4.5 h-4.5 text-yellow-400" />}
           </button>
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -397,7 +496,25 @@ export default function App() {
                   </button>
                 </div>
 
-                <nav className="space-y-1.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">
+                    Select Branch
+                  </label>
+                  <select
+                    value={selectedPropertyId}
+                    onChange={(e) => setSelectedPropertyId(e.target.value)}
+                    className="w-full bg-neutral-800 text-white text-xs font-semibold rounded-xl px-3 py-2 border border-neutral-700 focus:outline-none"
+                  >
+                    <option value="all">🏢 All Properties ({properties.length})</option>
+                    {properties.map(p => (
+                      <option key={p.id} value={p.id}>
+                        🏢 {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <nav className="space-y-1.5 pt-2">
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -422,6 +539,32 @@ export default function App() {
                     );
                   })}
                 </nav>
+
+                <div className="pt-2 border-t border-neutral-800 space-y-2">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Security PIN</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setShowChangePinModal(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700/70 rounded-xl py-2 px-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>Set PIN</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleLock();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="bg-red-950/40 hover:bg-red-900 text-red-200 border border-red-800/50 rounded-xl py-2 px-2 text-xs font-semibold flex items-center justify-center gap-1.5"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-red-400" />
+                      <span>Lock</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="text-[10px] text-neutral-500 font-semibold border-t border-neutral-800 pt-4">
@@ -446,18 +589,26 @@ export default function App() {
             >
             {activeTab === 'dashboard' && (
               <DashboardOverview 
+                userRole={userRole}
+                properties={properties}
+                selectedPropertyId={selectedPropertyId}
+                onSelectProperty={setSelectedPropertyId}
+                onAddProperty={handleAddProperty}
                 tenants={tenants}
                 payments={payments}
-                announcements={announcements}
                 billingAlerts={billingAlerts}
                 onNavigate={setActiveTab}
                 onSelectTenant={handleSelectTenantFromDashboard}
                 onTriggerAlert={handleSendBillingAlert}
+                showToast={showToast}
               />
             )}
 
             {activeTab === 'tenants' && (
               <TenantDirectory 
+                userRole={userRole}
+                properties={properties}
+                selectedPropertyId={selectedPropertyId}
                 tenants={tenants}
                 payments={payments}
                 onAddTenant={handleAddTenant}
@@ -470,19 +621,15 @@ export default function App() {
 
             {activeTab === 'billing' && (
               <BillingManager 
+                userRole={userRole}
+                properties={properties}
+                selectedPropertyId={selectedPropertyId}
                 tenants={tenants}
                 payments={payments}
                 billingAlerts={billingAlerts}
                 onAddPayment={handleAddPayment}
                 onSendAlert={handleSendBillingAlert}
-              />
-            )}
-
-            {activeTab === 'announcements' && (
-              <AnnouncementCenter 
-                tenants={tenants}
-                announcements={announcements}
-                onAddAnnouncement={handleAddAnnouncement}
+                showToast={showToast}
               />
             )}
           </motion.div>

@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "properties": {
+      "title": "Property",
+      "description": "PG Property Branches",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "totalRooms": { "type": "number" },
+        "totalFloors": { "type": "number" },
+        "contactNumber": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["name", "code", "address", "city"]
+    },
+    "tenants": {
+      "title": "Tenant",
+      "description": "PG Resident details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "rentAmount": { "type": "number" },
+        "securityDeposit": { "type": "number" },
+        "presentPaid": { "type": "number" },
+        "idType": { "type": "string" },
+        "idNumber": { "type": "string" },
+        "checkInDate": { "type": "string" },
+        "checkOutDate": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["name", "phone", "propertyId", "roomNumber"]
+    },
+    "payments": {
+      "title": "PaymentLog",
+      "description": "Payment transaction logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "amount": { "type": "number" },
+        "billingMonth": { "type": "string" },
+        "paymentDate": { "type": "string" },
+        "paymentMode": { "type": "string" },
+        "referenceId": { "type": "string" }
+      },
+      "required": ["tenantId", "amount", "billingMonth", "paymentDate"]
+    }
+  }
+}

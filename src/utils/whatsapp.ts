@@ -83,7 +83,7 @@ Regards,
 }
 
 /**
- * 2. Payment receipt confirmation template
+ * 2. Payment receipt confirmation template (Formatted as an official digital printed slip)
  */
 export function getReceiptTemplate(data: {
   tenantName: string;
@@ -93,28 +93,45 @@ export function getReceiptTemplate(data: {
   paymentDate: string;
   paymentMode: string;
   referenceId: string;
+  propertyName?: string;
+  propertyAddress?: string;
 }): string {
   const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
-  return `*GMR LUXURY PG - OFFICIAL PAYMENT RECEIPT* 🧾✅
+  const receiptNo = `GMR-RCPT-${data.referenceId.replace(/\D/g, '').slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
+  const branchHeader = data.propertyName ? `*${data.propertyName.toUpperCase()}*` : '*GMR LUXURY CO-LIVING PG*';
+  const branchAddr = data.propertyAddress || '#7 Akash Nagar Main Road, Mahadevapura, Bengaluru / Madhapur, Hyderabad';
 
-Dear *${data.tenantName}*,
+  return `========================================
+🧾 *OFFICIAL RENT PAYMENT RECEIPT* 🧾
+========================================
+${branchHeader}
+📍 ${branchAddr}
+📞 Manager Contact: +91 99515 13796 / +91 70360 19865
 
-Thank you! We have successfully received and logged your rent payment.
+----------------------------------------
+*RECEIPT NO:* ${receiptNo}
+*DATE OF ISSUANCE:* ${data.paymentDate}
+*PAYMENT STATUS:* ✅ PAID & VERIFIED
+----------------------------------------
 
-💳 *TRANSACTION DETAILS:*
-• Received Amount: *₹${data.amount.toLocaleString('en-IN')}/-*
+👤 *RESIDENT DETAILS:*
+• Name: *${data.tenantName}*
+• Allocated Room: *Room ${data.roomNumber}*
+
+💳 *PAYMENT BREAKDOWN:*
 • Rent Period: *${monthName}*
-• Date Received: *${data.paymentDate}*
-• Mode of Payment: *${data.paymentMode}*
-• Reference/Txn ID: *${data.referenceId}*
-• Allocation: *Room ${data.roomNumber}*
+• Payment Mode: *${data.paymentMode}*
+• Transaction Ref ID: *${data.referenceId}*
+• Paid Amount: *₹${data.amount.toLocaleString('en-IN')}/-*
 
-Your monthly ledger accounts are fully clear for this billing cycle. Keep this digital slip for your records.
+----------------------------------------
+*TOTAL RECEIVED:* *₹${data.amount.toLocaleString('en-IN')}/-* (Rupees ${data.amount.toLocaleString('en-IN')} Only)
+----------------------------------------
+
+_This is a computer-generated digital payment receipt issued by GMR Co-Living PG. Thank you for making your payment on time!_
 
 Regards,
 *GMR Co-Living Management*
-#7 Akash Nagar Main Road, Mahadevapura, Bengaluru
-📞 +91 99515 13796
 🏠 *Feels Like Home*`;
 }
 
@@ -128,30 +145,33 @@ export function getRentReminderTemplate(data: {
   billingMonth: string;
   dueDate: string;
   status: string;
+  propertyName?: string;
 }): string {
   const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
   const isOverdue = data.status.toLowerCase() === 'overdue';
   const alertIcon = isOverdue ? '🚨' : '⚠️';
   const statusLabel = isOverdue ? '*OVERDUE*' : '*PENDING*';
+  const branchName = data.propertyName ? `*${data.propertyName}*` : '*GMR Luxury Co-Living PG*';
 
-  return `${alertIcon} *GMR LUXURY PG - RENT DUES REMINDER* ⏰
+  return `${alertIcon} *${branchName.toUpperCase()} - RENT DUES REMINDER* ⏰
 
 Dear *${data.tenantName}*,
 
-This is an official reminder that your rent for *Room ${data.roomNumber}* is currently ${statusLabel} for the cycle *${monthName}*.
+This is an official reminder that your monthly rent for *Room ${data.roomNumber}* is currently ${statusLabel} for *${monthName}*.
 
-💵 *DUES SUMMARY:*
-• Rent Amount: *₹${data.rentAmount.toLocaleString('en-IN')}/-*
+💵 *DUES STATEMENT:*
+• Resident Name: *${data.tenantName}*
+• Room Number: *Room ${data.roomNumber}*
+• Payable Amount: *₹${data.rentAmount.toLocaleString('en-IN')}/-*
 • Due Date: *${data.dueDate}*
-• Current Status: ${statusLabel}
+• Status: ${statusLabel}
 
-Please clear the dues via UPI, Net Banking, or cash handover on or before the *5th of the month* to avoid late payment daily charges of ₹100/-.
+Please pay the outstanding rent via UPI / PhonePe / Google Pay / Net Banking or Cash on or before the due date.
 
-_If you have already transferred the rent, please ignore this reminder and share your transaction reference ID with the warden to clear your ledger._
+_If you have already transferred the rent, please ignore this notice and share your payment screenshot/reference ID with the warden._
 
 Regards,
-*GMR Co-Living Management*
-#7 Akash Nagar Main Road, Mahadevapura, Bengaluru
+*${branchName} Management*
 📞 +91 99515 13796 / +91 70360 19865
 🏠 *Feels Like Home*`;
 }

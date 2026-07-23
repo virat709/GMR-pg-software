@@ -24,14 +24,19 @@ import {
   Home,
   FileCheck,
   Building,
-  MessageCircle
+  MessageCircle,
+  Lock,
+  UserCheck
 } from 'lucide-react';
-import { Tenant, PaymentLog, IDType } from '../types';
+import { Tenant, PaymentLog, IDType, Property, UserRole } from '../types';
 import { triggerWhatsAppMessage, getAdmissionTemplate } from '../utils/whatsapp';
 
 interface TenantDirectoryProps {
+  userRole?: UserRole | null;
   tenants: Tenant[];
   payments: PaymentLog[];
+  properties?: Property[];
+  selectedPropertyId?: string;
   onAddTenant: (tenant: Omit<Tenant, 'id'>) => void;
   onEditTenant: (tenant: Tenant) => void;
   onCheckOutTenant: (tenantId: string) => void;
@@ -40,8 +45,11 @@ interface TenantDirectoryProps {
 }
 
 export default function TenantDirectory({
+  userRole = 'super_admin',
   tenants,
   payments,
+  properties = [],
+  selectedPropertyId = 'all',
   onAddTenant,
   onEditTenant,
   onCheckOutTenant,
@@ -58,6 +66,7 @@ export default function TenantDirectory({
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
 
   // Form State
+  const [propertyId, setPropertyId] = useState<string>('prop_1');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -74,6 +83,29 @@ export default function TenantDirectory({
   const [age, setAge] = useState<number>(22);
   const [dob, setDob] = useState('');
   const [educationalQualification, setEducationalQualification] = useState('');
+
+  // Helper to calculate age from DOB string (YYYY-MM-DD)
+  const calculateAgeFromDob = (dobString: string): number | null => {
+    if (!dobString) return null;
+    const birthDate = new Date(dobString);
+    if (isNaN(birthDate.getTime())) return null;
+
+    const today = new Date();
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+    return calculatedAge >= 0 ? calculatedAge : 0;
+  };
+
+  const handleDobChange = (dobValue: string) => {
+    setDob(dobValue);
+    const computedAge = calculateAgeFromDob(dobValue);
+    if (computedAge !== null) {
+      setAge(computedAge);
+    }
+  };
   const [employment, setEmployment] = useState('');
   const [officeAddress, setOfficeAddress] = useState('');
   const [permanentAddress, setPermanentAddress] = useState('');
@@ -85,6 +117,7 @@ export default function TenantDirectory({
   // Open modal for add
   const handleOpenAdd = () => {
     setEditingTenant(null);
+    setPropertyId(selectedPropertyId === 'all' || !selectedPropertyId ? (properties[0]?.id || 'prop_1') : selectedPropertyId);
     setName('');
     setPhone('');
     setEmail('');
@@ -116,6 +149,7 @@ export default function TenantDirectory({
   const handleOpenEdit = (tenant: Tenant, e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid selecting row
     setEditingTenant(tenant);
+    setPropertyId(tenant.propertyId || 'prop_1');
     setName(tenant.name);
     setPhone(tenant.phone);
     setEmail(tenant.email);
@@ -129,8 +163,10 @@ export default function TenantDirectory({
     
     // GMR Specific
     setFatherName(tenant.fatherName || '');
-    setAge(tenant.age || 22);
-    setDob(tenant.dob || '');
+    const initialDob = tenant.dob || '';
+    setDob(initialDob);
+    const computedAge = calculateAgeFromDob(initialDob);
+    setAge(computedAge !== null ? computedAge : (tenant.age || 22));
     setEducationalQualification(tenant.educationalQualification || '');
     setEmployment(tenant.employment || '');
     setOfficeAddress(tenant.officeAddress || '');
@@ -158,6 +194,7 @@ export default function TenantDirectory({
     if (editingTenant) {
       onEditTenant({
         ...editingTenant,
+        propertyId,
         name,
         phone,
         email,
@@ -181,6 +218,7 @@ export default function TenantDirectory({
       });
     } else {
       onAddTenant({
+        propertyId,
         name,
         phone,
         email,
@@ -210,11 +248,12 @@ export default function TenantDirectory({
 
   // Filter tenants
   const filteredTenants = tenants.filter(t => {
+    const matchesProperty = !selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId;
     const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           t.roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.phone.includes(searchTerm);
     const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesProperty && matchesSearch && matchesStatus;
   });
 
   // Selected Tenant Details
@@ -360,13 +399,23 @@ export default function TenantDirectory({
                             <Edit className="w-4 h-4" />
                           </button>
                           {tenant.status === 'Active' && (
-                            <button
-                              onClick={() => onCheckOutTenant(tenant.id)}
-                              className="p-1.5 hover:bg-red-50 rounded-md text-neutral-500 hover:text-red-600 transition-colors cursor-pointer"
-                              title="Check out Resident"
-                            >
-                              <LogOut className="w-4 h-4" />
-                            </button>
+                            userRole === 'super_admin' ? (
+                              <button
+                                onClick={() => onCheckOutTenant(tenant.id)}
+                                className="p-1.5 hover:bg-red-50 rounded-md text-neutral-500 hover:text-red-600 transition-colors cursor-pointer"
+                                title="Check out Resident (Super Access)"
+                              >
+                                <LogOut className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => alert('Action Restricted! Resident checkout requires Super Admin PIN (1234).')}
+                                className="p-1.5 hover:bg-neutral-100 rounded-md text-neutral-300 transition-colors cursor-not-allowed"
+                                title="Checkout Restricted (Super Access Required)"
+                              >
+                                <Lock className="w-4 h-4 text-neutral-400" />
+                              </button>
+                            )
                           )}
                         </div>
                       </td>
@@ -710,7 +759,7 @@ export default function TenantDirectory({
                       type="date" 
                       required
                       value={dob}
-                      onChange={(e) => setDob(e.target.value)}
+                      onChange={(e) => handleDobChange(e.target.value)}
                       className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 font-mono"
                     />
                   </div>

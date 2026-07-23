@@ -18,25 +18,41 @@ import {
   AlertTriangle,
   Send,
   Building,
-  MessageCircle
+  MessageCircle,
+  Lock,
+  ShieldCheck,
+  UserCheck,
+  FileText,
+  Download
 } from 'lucide-react';
-import { Tenant, PaymentLog, PaymentMode, BillingAlert } from '../types';
+import { Tenant, PaymentLog, PaymentMode, BillingAlert, Property, UserRole } from '../types';
 import { triggerWhatsAppMessage, getReceiptTemplate, getRentReminderTemplate } from '../utils/whatsapp';
+import { generateReceiptPDF } from '../utils/receiptPdfGenerator';
+import { generateRentReminderPDF } from '../utils/reminderPdfGenerator';
+import PartnerStatementModal from './PartnerStatementModal';
 
 interface BillingManagerProps {
+  userRole?: UserRole | null;
   tenants: Tenant[];
   payments: PaymentLog[];
   billingAlerts: BillingAlert[];
+  properties?: Property[];
+  selectedPropertyId?: string;
   onAddPayment: (payment: Omit<PaymentLog, 'id'>) => void;
   onSendAlert: (alert: BillingAlert) => void;
+  showToast?: (msg: string, type?: 'success' | 'info') => void;
 }
 
 export default function BillingManager({
+  userRole = 'super_admin',
   tenants,
   payments,
   billingAlerts,
+  properties = [],
+  selectedPropertyId = 'all',
   onAddPayment,
-  onSendAlert
+  onSendAlert,
+  showToast = () => {}
 }: BillingManagerProps) {
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +61,7 @@ export default function BillingManager({
   // Modals state
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [selectedAlertForPayment, setSelectedAlertForPayment] = useState<BillingAlert | null>(null);
   const [activeReceiptPayment, setActiveReceiptPayment] = useState<PaymentLog | null>(null);
 
@@ -129,17 +146,154 @@ export default function BillingManager({
     return tenants.find(t => t.id === tenantId);
   };
 
+  // Download official Receipt PDF
+  const handleDownloadReceiptPDF = (paymentLog: PaymentLog) => {
+    const tenantObj = getTenant(paymentLog.tenantId);
+    if (!tenantObj) return;
+
+    const propObj = properties.find(p => p.id === tenantObj.propertyId);
+    const pdfFilename = generateReceiptPDF({
+      payment: paymentLog,
+      tenantName: tenantObj.name,
+      tenantPhone: tenantObj.phone,
+      roomNumber: tenantObj.roomNumber,
+      propertyName: propObj?.name,
+      propertyAddress: propObj?.address
+    });
+
+    showToast(`Receipt PDF (${pdfFilename}) downloaded successfully!`, 'success');
+  };
+
+  // Send WhatsApp message AND download PDF receipt
+  const handleSendWhatsAppReceipt = (paymentLog: PaymentLog) => {
+    const tenantObj = getTenant(paymentLog.tenantId);
+    if (!tenantObj) return;
+
+    const propObj = properties.find(p => p.id === tenantObj.propertyId);
+
+    // 1. Download official PDF Receipt automatically
+    const pdfFilename = generateReceiptPDF({
+      payment: paymentLog,
+      tenantName: tenantObj.name,
+      tenantPhone: tenantObj.phone,
+      roomNumber: tenantObj.roomNumber,
+      propertyName: propObj?.name,
+      propertyAddress: propObj?.address
+    });
+
+    // 2. Prepare formatted text message
+    const text = getReceiptTemplate({
+      tenantName: tenantObj.name,
+      roomNumber: tenantObj.roomNumber,
+      amount: paymentLog.amount,
+      billingMonth: paymentLog.billingMonth,
+      paymentDate: paymentLog.paymentDate,
+      paymentMode: paymentLog.paymentMode,
+      referenceId: paymentLog.referenceId,
+      propertyName: propObj?.name,
+      propertyAddress: propObj?.address
+    });
+
+    // 3. Open WhatsApp Web/App
+    triggerWhatsAppMessage(tenantObj.phone, text);
+
+    // 4. Notify user
+    showToast(`Receipt PDF downloaded! Attach '${pdfFilename}' in WhatsApp chat.`, 'success');
+  };
+
+  // Download Rent Reminder / Dues Statement PDF
+  const handleDownloadReminderPDF = (record: {
+    tenantId: string;
+    name: string;
+    roomNumber: string;
+    rentAmount: number;
+    dueDate: string;
+    status: string;
+  }) => {
+    const tenantObj = getTenant(record.tenantId);
+    if (!tenantObj) return;
+
+    const propObj = properties.find(p => p.id === tenantObj.propertyId);
+    const pdfFilename = generateRentReminderPDF({
+      alert: {
+        tenantId: record.tenantId,
+        tenantName: record.name,
+        roomNumber: record.roomNumber,
+        rentAmount: record.rentAmount,
+        billingMonth: currentMonth,
+        dueDate: record.dueDate,
+        status: record.status as any
+      },
+      tenantPhone: tenantObj.phone,
+      propertyName: propObj?.name,
+      propertyAddress: propObj?.address
+    });
+
+    showToast(`Dues Statement PDF (${pdfFilename}) downloaded!`, 'success');
+  };
+
+  // Send WhatsApp Reminder & Auto-Download Dues Statement PDF
+  const handleSendWhatsAppReminder = (record: {
+    tenantId: string;
+    name: string;
+    roomNumber: string;
+    rentAmount: number;
+    dueDate: string;
+    status: string;
+  }) => {
+    const tenantObj = getTenant(record.tenantId);
+    if (!tenantObj) return;
+
+    const propObj = properties.find(p => p.id === tenantObj.propertyId);
+
+    // 1. Download official Dues Statement PDF
+    const pdfFilename = generateRentReminderPDF({
+      alert: {
+        tenantId: record.tenantId,
+        tenantName: record.name,
+        roomNumber: record.roomNumber,
+        rentAmount: record.rentAmount,
+        billingMonth: currentMonth,
+        dueDate: record.dueDate,
+        status: record.status as any
+      },
+      tenantPhone: tenantObj.phone,
+      propertyName: propObj?.name,
+      propertyAddress: propObj?.address
+    });
+
+    // 2. Prepare WhatsApp text
+    const text = getRentReminderTemplate({
+      tenantName: record.name,
+      roomNumber: record.roomNumber,
+      rentAmount: record.rentAmount,
+      billingMonth: currentMonth,
+      dueDate: record.dueDate,
+      status: record.status,
+      propertyName: propObj?.name
+    });
+
+    // 3. Trigger WhatsApp
+    triggerWhatsAppMessage(tenantObj.phone, text);
+
+    // 4. Notify user
+    showToast(`Dues Statement PDF downloaded! Attach '${pdfFilename}' in WhatsApp chat.`, 'success');
+  };
+
   // Combined records for searchable billing status
   const currentMonth = '2026-07';
   const displayBillingRecords = tenants
-    .filter(t => t.status === 'Active')
+    .filter(t => t.status === 'Active' && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId))
     .map(tenant => {
       // Find payment for this tenant for July 2026
       const paymentLog = payments.find(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
       const alertRecord = billingAlerts.find(b => b.tenantId === tenant.id);
+      const property = properties.find(p => p.id === tenant.propertyId);
       
       return {
         tenantId: tenant.id,
+        propertyId: tenant.propertyId,
+        propertyName: property ? property.name : '',
         name: tenant.name,
         roomNumber: tenant.roomNumber,
         rentAmount: tenant.rentAmount,
@@ -148,6 +302,29 @@ export default function BillingManager({
         paymentLog: paymentLog || null
       };
     });
+
+  // 30-Day Financial Totals
+  const now = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+
+  const scopeTenants = tenants.filter(t => t.status === 'Active' && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId));
+  const scopeTenantIds = new Set(scopeTenants.map(t => t.id));
+
+  const totalExpectedAmount = scopeTenants.reduce((sum, t) => sum + t.rentAmount, 0);
+
+  const last30DaysPayments = payments.filter(p => {
+    if (selectedPropertyId && selectedPropertyId !== 'all' && !scopeTenantIds.has(p.tenantId)) return false;
+    const pDate = new Date(p.paymentDate);
+    return pDate >= thirtyDaysAgo && pDate <= now;
+  });
+  const totalCollectedAmount = last30DaysPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  const pendingAlerts = billingAlerts.filter(b => {
+    if (selectedPropertyId && selectedPropertyId !== 'all' && !scopeTenantIds.has(b.tenantId)) return false;
+    return b.status === 'Pending' || b.status === 'Overdue';
+  });
+  const totalDuesAmount = pendingAlerts.reduce((sum, b) => sum + b.rentAmount, 0);
 
   // Filter records
   const filteredRecords = displayBillingRecords.filter(rec => {
@@ -159,6 +336,42 @@ export default function BillingManager({
 
   return (
     <div className="space-y-6" id="billing-manager-view">
+
+      {/* Financial Totals Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Total Amount Expected</span>
+            <p className="text-2xl font-extrabold text-neutral-900 mt-0.5">₹{totalExpectedAmount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-neutral-400 mt-1">{scopeTenants.length} Active Residents</p>
+          </div>
+          <div className="p-3 bg-neutral-100 text-neutral-700 rounded-xl">
+            <Building className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Total Rent Collected</span>
+            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">₹{totalCollectedAmount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-emerald-700 font-bold mt-1">Last 30 Days Transactions</p>
+          </div>
+          <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200/60">
+            <IndianRupee className="w-5 h-5 text-emerald-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-red-500 uppercase tracking-wide">Total Pending Dues</span>
+            <p className="text-2xl font-extrabold text-red-600 mt-0.5">₹{totalDuesAmount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-red-600 font-bold mt-1">{pendingAlerts.length} Outstanding Bills</p>
+          </div>
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-200/60">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+        </div>
+      </div>
       
       {/* Search and Action Header */}
       <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -173,7 +386,17 @@ export default function BillingManager({
           />
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Partner Statement PDF Button */}
+          <button
+            onClick={() => setIsPartnerModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-3 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-all hover:shadow-md"
+            title="Download 30-Day Partner Statement PDF"
+          >
+            <FileText className="w-4 h-4 text-emerald-100" />
+            <span>Partner 30-Day PDF</span>
+          </button>
+
           {/* Status filters */}
           <div className="inline-flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600">
             <button 
@@ -290,40 +513,19 @@ export default function BillingManager({
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {rec.status !== 'Paid' ? (
-                          <>
+                          <div className="flex gap-1.5 justify-end">
                             <button
-                              onClick={() => onSendAlert({
-                                tenantId: rec.tenantId,
-                                tenantName: rec.name,
-                                roomNumber: rec.roomNumber,
-                                rentAmount: rec.rentAmount,
-                                billingMonth: currentMonth,
-                                status: rec.status as any,
-                                dueDate: rec.dueDate
-                              })}
-                              className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 cursor-pointer text-xs"
-                              title="Send Monthly Billing Alert"
+                              onClick={() => handleDownloadReminderPDF(rec)}
+                              className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow-xs cursor-pointer text-xs"
+                              title="Download Official Dues Statement PDF"
                             >
-                              <Smartphone className="w-3.5 h-3.5 text-neutral-500" />
-                              <span>Alert</span>
+                              <Download className="w-3.5 h-3.5 text-blue-600" />
+                              <span>PDF</span>
                             </button>
                             <button
-                              onClick={() => {
-                                const tenantObj = getTenant(rec.tenantId);
-                                if (tenantObj) {
-                                  const text = getRentReminderTemplate({
-                                    tenantName: rec.name,
-                                    roomNumber: rec.roomNumber,
-                                    rentAmount: rec.rentAmount,
-                                    billingMonth: currentMonth,
-                                    dueDate: rec.dueDate,
-                                    status: rec.status
-                                  });
-                                  triggerWhatsAppMessage(tenantObj.phone, text);
-                                }
-                              }}
+                              onClick={() => handleSendWhatsAppReminder(rec)}
                               className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 cursor-pointer text-xs"
-                              title="Send Rent Reminder on WhatsApp"
+                              title="Send Rent Dues Notice on WhatsApp & Download PDF"
                             >
                               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                               <span>WhatsApp</span>
@@ -343,48 +545,29 @@ export default function BillingManager({
                               <IndianRupee className="w-3.5 h-3.5" />
                               <span>Collect</span>
                             </button>
-                          </>
+                          </div>
                         ) : (
-                          <div className="flex gap-2 justify-end">
+                          <div className="flex gap-1.5 justify-end">
                             <button
                               onClick={() => handleOpenReceipt(rec.paymentLog!)}
-                              className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow-xs cursor-pointer text-xs"
+                              className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow-xs cursor-pointer text-xs"
                               title="View Receipt Slip"
                             >
-                              <ReceiptText className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Receipt</span>
+                              <ReceiptText className="w-3.5 h-3.5 text-neutral-600" />
+                              <span>View</span>
                             </button>
                             <button
-                              onClick={() => {
-                                handleOpenReceipt(rec.paymentLog!);
-                                setTimeout(() => {
-                                  window.print();
-                                }, 150);
-                              }}
-                              className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer text-xs"
-                              title="Print Friendly Receipt Copy"
+                              onClick={() => handleDownloadReceiptPDF(rec.paymentLog!)}
+                              className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow-xs cursor-pointer text-xs"
+                              title="Download Official Receipt PDF"
                             >
-                              <Printer className="w-3.5 h-3.5 text-neutral-600" />
-                              <span>Print</span>
+                              <Download className="w-3.5 h-3.5 text-blue-600" />
+                              <span>PDF</span>
                             </button>
                             <button
-                              onClick={() => {
-                                const tenantObj = getTenant(rec.paymentLog!.tenantId);
-                                if (tenantObj) {
-                                  const text = getReceiptTemplate({
-                                    tenantName: tenantObj.name,
-                                    roomNumber: tenantObj.roomNumber,
-                                    amount: rec.paymentLog!.amount,
-                                    billingMonth: rec.paymentLog!.billingMonth,
-                                    paymentDate: rec.paymentLog!.paymentDate,
-                                    paymentMode: rec.paymentLog!.paymentMode,
-                                    referenceId: rec.paymentLog!.referenceId
-                                  });
-                                  triggerWhatsAppMessage(tenantObj.phone, text);
-                                }
-                              }}
+                              onClick={() => handleSendWhatsAppReceipt(rec.paymentLog!)}
                               className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 cursor-pointer text-xs"
-                              title="Send Receipt on WhatsApp"
+                              title="Send Receipt via WhatsApp & Download PDF"
                             >
                               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                               <span>WhatsApp</span>
@@ -679,38 +862,38 @@ export default function BillingManager({
                   Close
                 </button>
                 <button
-                  onClick={() => {
-                    const tenantObj = getTenant(activeReceiptPayment.tenantId);
-                    if (tenantObj) {
-                      const text = getReceiptTemplate({
-                        tenantName: tenantObj.name,
-                        roomNumber: tenantObj.roomNumber,
-                        amount: activeReceiptPayment.amount,
-                        billingMonth: activeReceiptPayment.billingMonth,
-                        paymentDate: activeReceiptPayment.paymentDate,
-                        paymentMode: activeReceiptPayment.paymentMode,
-                        referenceId: activeReceiptPayment.referenceId
-                      });
-                      triggerWhatsAppMessage(tenantObj.phone, text);
-                    }
-                  }}
+                  onClick={() => handleDownloadReceiptPDF(activeReceiptPayment)}
+                  className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Download Official Receipt PDF"
+                >
+                  <Download className="w-4 h-4 text-blue-600" />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => handleSendWhatsAppReceipt(activeReceiptPayment)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  title="Send via WhatsApp & Auto-Download PDF Receipt"
                 >
                   <MessageCircle className="w-4.5 h-4.5" />
                   <span>Send via WhatsApp</span>
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="bg-neutral-900 hover:bg-neutral-800 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <Printer className="w-4.5 h-4.5" />
-                  <span>Print Receipt</span>
                 </button>
               </div>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* 30-DAY PARTNER STATEMENT MODAL */}
+      <PartnerStatementModal 
+        isOpen={isPartnerModalOpen}
+        onClose={() => setIsPartnerModalOpen(false)}
+        properties={properties}
+        tenants={tenants}
+        payments={payments}
+        billingAlerts={billingAlerts}
+        selectedPropertyId={selectedPropertyId}
+        showToast={showToast}
+      />
 
     </div>
   );

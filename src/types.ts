@@ -1,7 +1,24 @@
 export type IDType = 'Aadhaar' | 'PAN' | 'Passport' | 'Driving License' | 'Other';
 
+export type PropertyType = 'Co-Living' | 'Boys PG' | 'Girls PG' | 'Luxury Apartments';
+
+export type UserRole = 'super_admin' | 'manager';
+
+export interface Property {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  city: string;
+  totalRooms: number;
+  totalFloors: number;
+  contactNumber: string;
+  type: PropertyType;
+}
+
 export interface Tenant {
   id: string;
+  propertyId: string;
   name: string;
   phone: string;
   email: string;
@@ -41,19 +58,9 @@ export interface PaymentLog {
   notes?: string;
 }
 
-export type AnnouncementCategory = 'Urgent' | 'Maintenance' | 'General' | 'Security';
-
-export interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  category: AnnouncementCategory;
-  sentDate: string; // ISO string or "YYYY-MM-DD HH:mm"
-  roomsTargeted: 'All' | string;
-}
-
 export interface BillingAlert {
   tenantId: string;
+  propertyId?: string;
   tenantName: string;
   roomNumber: string;
   rentAmount: number;
