@@ -43,8 +43,19 @@ import DashboardOverview from './components/DashboardOverview';
 import TenantDirectory from './components/TenantDirectory';
 import BillingManager from './components/BillingManager';
 import PinLockModal from './components/PinLockModal';
+import LogoSplashScreen from './components/LogoSplashScreen';
 
 export default function App() {
+  // Opening Logo Splash Screen State
+  const [showSplashScreen, setShowSplashScreen] = useState<boolean>(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplashScreen(false);
+    }, 2600);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Security PIN Lock State & Role Access
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem('gmr_unlocked') === 'true';
@@ -225,7 +236,10 @@ export default function App() {
   return (
     <div className={`h-screen w-full font-sans flex flex-col md:flex-row overflow-hidden relative transition-colors duration-300 theme-${theme}`}>
       
-      {/* SECURITY PIN LOCK SYSTEM OVERLAY & PIN MODAL */}
+      {/* OPENING LOGO SPLASH SCREEN */}
+      <LogoSplashScreen isVisible={showSplashScreen} onFinish={() => setShowSplashScreen(false)} />
+
+      {/* SECURITY AUTH SYSTEM OVERLAY & AUTH MODAL */}
       <PinLockModal 
         isUnlocked={isUnlocked}
         userRole={userRole}

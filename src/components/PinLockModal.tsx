@@ -3,14 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck,
   UserCheck,
-  Shield,
   Mail,
   LogIn,
   UserPlus,
   Loader2,
   AlertCircle,
-  KeyRound,
-  CheckCircle2
+  KeyRound
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth, googleProvider } from '../lib/firebase';
@@ -115,28 +113,22 @@ export default function PinLockModal({
               <div className="absolute -top-20 -left-20 w-40 h-40 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-yellow-500/15 rounded-full blur-3xl pointer-events-none" />
 
-              {/* OFFICIAL GMR BRAND LOGO */}
-              <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center mx-auto mb-3 shadow-xl p-2 border border-neutral-700 shrink-0">
-                <svg viewBox="0 0 100 100" className="w-12 h-12 text-[#16a34a]" fill="currentColor">
-                  <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" fill="currentColor" />
-                  <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" fill="currentColor" />
-                  <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" fill="currentColor" />
-                  <path d="M50,25 C34,35 32,50 40,62 C45,52 47,40 50,25 Z" fill="currentColor" />
-                  <path d="M50,25 C66,35 68,50 60,62 C55,52 53,40 50,25 Z" fill="currentColor" />
-                  <path d="M50,33 C26,42 25,58 35,66 C40,58 44,48 50,33 Z" fill="currentColor" />
-                  <path d="M50,33 C74,42 75,58 65,66 C60,58 56,48 50,33 Z" fill="currentColor" />
-                  <path d="M22,70 C40,55 60,80 78,65 C60,74 40,60 22,70 Z" fill="currentColor" />
-                  <path d="M18,78 C38,62 62,88 82,72 C62,81 38,67 18,78 Z" fill="currentColor" />
-                </svg>
+              {/* ORIGINAL GMR LOGO IMAGE */}
+              <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-3 flex items-center justify-center relative">
+                <div className="absolute inset-0 bg-white/10 rounded-3xl blur-md pointer-events-none" />
+                <img
+                  src="/logo-transparent.png"
+                  alt="GMR Luxury Co-Living Logo"
+                  className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(6,88,42,0.3)]"
+                />
               </div>
 
-              {/* BRAND HEADING */}
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <h2 className="text-2xl font-extrabold tracking-wide text-white">GMR</h2>
-                <span className="bg-[#e6df15] text-neutral-950 font-black text-xs px-2 py-0.5 rounded shadow-sm">PG</span>
-              </div>
-              <p className="text-[11px] text-neutral-400 font-semibold tracking-wider uppercase mb-5">
-                Luxury Co-Living Management
+              {/* BRAND HEADING & TAGLINE */}
+              <h2 className="text-xl sm:text-2xl font-black text-[#06582a] bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-amber-300 to-yellow-400 tracking-wide uppercase">
+                GMR Luxury Co-Living
+              </h2>
+              <p className="text-xs text-neutral-400 font-semibold tracking-wider uppercase mb-5 mt-0.5">
+                Feels like home • Management System
               </p>
 
               {/* SELECT ACCESS ROLE LEVEL */}
