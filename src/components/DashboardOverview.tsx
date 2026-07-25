@@ -256,7 +256,7 @@ export default function DashboardOverview({
             <button
               disabled
               className="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 cursor-not-allowed"
-              title="Requires Super Admin Access (PIN: 1234)"
+              title="Requires Super Admin Access"
             >
               <Lock className="w-3.5 h-3.5 text-neutral-400" />
               <span>Add Property (Super Only)</span>

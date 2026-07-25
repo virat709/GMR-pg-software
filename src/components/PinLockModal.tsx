@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck,
@@ -42,6 +42,22 @@ export default function PinLockModal({
   showToast,
   secondAdmins
 }: PinLockModalProps) {
+  // Local combined state for instant UI updates
+  const [localAdmins, setLocalAdmins] = useState<SecondAdmin[]>([]);
+
+  // Sync props and localStorage on mount / prop update
+  useEffect(() => {
+    const savedLocal: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const mergedMap = new Map<string, SecondAdmin>();
+
+    // Add Firestore admins
+    secondAdmins.forEach(a => mergedMap.set(a.email.toLowerCase(), a));
+    // Add local admins
+    savedLocal.forEach(a => mergedMap.set(a.email.toLowerCase(), a));
+
+    setLocalAdmins(Array.from(mergedMap.values()));
+  }, [secondAdmins]);
+
   // Login Form State
   const [emailInput, setEmailInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
@@ -54,6 +70,7 @@ export default function PinLockModal({
   const [newAdminEmail, setNewAdminEmail] = useState<string>('');
   const [newAdminPassword, setNewAdminPassword] = useState<string>('');
   const [adminMgmtError, setAdminMgmtError] = useState<string | null>(null);
+  const [isSubmittingAdmin, setIsSubmittingAdmin] = useState<boolean>(false);
 
   // Strict Login Handler
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -75,8 +92,8 @@ export default function PinLockModal({
         return;
       }
 
-      // 2. Check Second Admin Credentials (from Firestore list)
-      const matchedSecondAdmin = secondAdmins.find(
+      // 2. Check Second Admin Credentials (from combined local & Firestore list)
+      const matchedSecondAdmin = localAdmins.find(
         (sa) => sa.email.trim().toLowerCase() === cleanEmail && sa.password === cleanPassword
       );
 
@@ -92,7 +109,7 @@ export default function PinLockModal({
       // 3. Fallback: Access Denied
       setAuthLoading(false);
       setAuthError('Access Denied: Invalid Email or Password. Only authorized GMR Admins can access this portal.');
-    }, 400);
+    }, 300);
   };
 
   // Add New Second Admin (Super Admin Only)
@@ -110,6 +127,8 @@ export default function PinLockModal({
       return;
     }
 
+    setIsSubmittingAdmin(true);
+
     const newAdmin: SecondAdmin = {
       id: 'admin_' + Math.random().toString(36).substring(2, 9),
       name: newAdminName.trim(),
@@ -118,7 +137,25 @@ export default function PinLockModal({
       addedAt: new Date().toISOString().split('T')[0]
     };
 
-    await saveSecondAdminInDb(newAdmin);
+    // 1. Instant local state update
+    const updatedList = [...localAdmins.filter(a => a.email !== newAdmin.email), newAdmin];
+    setLocalAdmins(updatedList);
+
+    // 2. Instant localStorage persistence
+    try {
+      localStorage.setItem('gmr_second_admins', JSON.stringify(updatedList));
+    } catch (e) {
+      console.warn('localStorage save notice:', e);
+    }
+
+    // 3. Cloud Firestore persistence (Fail-safe try/catch)
+    try {
+      await saveSecondAdminInDb(newAdmin);
+    } catch (err: any) {
+      console.warn('Firestore save Second Admin notice:', err?.message || err);
+    }
+
+    setIsSubmittingAdmin(false);
     showToast(`Second Admin "${newAdmin.name}" added successfully!`, 'success');
     setNewAdminName('');
     setNewAdminEmail('');
@@ -128,7 +165,21 @@ export default function PinLockModal({
   // Delete Second Admin
   const handleDeleteSecondAdmin = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to revoke access for Second Admin "${name}"?`)) {
-      await deleteSecondAdminInDb(id);
+      const updatedList = localAdmins.filter(a => a.id !== id);
+      setLocalAdmins(updatedList);
+
+      try {
+        localStorage.setItem('gmr_second_admins', JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('localStorage delete notice:', e);
+      }
+
+      try {
+        await deleteSecondAdminInDb(id);
+      } catch (err: any) {
+        console.warn('Firestore delete Second Admin notice:', err?.message || err);
+      }
+
       showToast(`Revoked access for Second Admin "${name}".`, 'info');
     }
   };
@@ -278,6 +329,7 @@ export default function PinLockModal({
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={onCloseChangePinModal}
                   className="p-1.5 hover:bg-neutral-100 text-neutral-400 rounded-xl cursor-pointer"
                 >
@@ -345,26 +397,33 @@ export default function PinLockModal({
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-xs hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  disabled={isSubmittingAdmin}
+                  className="w-full py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-xs hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Grant Second Admin Access</span>
+                  {isSubmittingAdmin ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Grant Second Admin Access</span>
+                    </>
+                  )}
                 </button>
               </form>
 
               {/* LIST OF REGISTERED SECOND ADMINS */}
               <div>
                 <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wide mb-2 flex items-center justify-between">
-                  <span>Active Second Admins ({secondAdmins.length})</span>
+                  <span>Active Second Admins ({localAdmins.length})</span>
                 </h4>
 
-                {secondAdmins.length === 0 ? (
+                {localAdmins.length === 0 ? (
                   <p className="text-xs text-neutral-400 italic text-center py-4 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
                     No Second Admins added yet. Only Super Admin has access.
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {secondAdmins.map((admin) => (
+                    {localAdmins.map((admin) => (
                       <div
                         key={admin.id}
                         className="p-3 bg-neutral-50 border border-neutral-200 rounded-2xl flex items-center justify-between gap-2 text-xs"
@@ -382,6 +441,7 @@ export default function PinLockModal({
                         </div>
 
                         <button
+                          type="button"
                           onClick={() => handleDeleteSecondAdmin(admin.id, admin.name)}
                           className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors cursor-pointer"
                           title="Revoke Admin Access"

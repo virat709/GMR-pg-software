@@ -409,7 +409,7 @@ export default function TenantDirectory({
                               </button>
                             ) : (
                               <button
-                                onClick={() => alert('Action Restricted! Resident checkout requires Super Admin PIN (1234).')}
+                                onClick={() => alert('Action Restricted! Resident checkout requires Super Admin authorization.')}
                                 className="p-1.5 hover:bg-neutral-100 rounded-md text-neutral-300 transition-colors cursor-not-allowed"
                                 title="Checkout Restricted (Super Access Required)"
                               >
