@@ -17,6 +17,12 @@ import {
 } from 'lucide-react';
 import { UserRole, SecondAdmin } from '../types';
 import { saveSecondAdminInDb, deleteSecondAdminInDb } from '../lib/firestoreService';
+import { auth } from '../lib/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously
+} from 'firebase/auth';
 
 interface PinLockModalProps {
   isUnlocked: boolean;
@@ -72,8 +78,25 @@ export default function PinLockModal({
   const [adminMgmtError, setAdminMgmtError] = useState<string | null>(null);
   const [isSubmittingAdmin, setIsSubmittingAdmin] = useState<boolean>(false);
 
+  // Firebase Auth Authenticator Helper
+  const authenticateFirebaseUser = async (email: string, pass: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (err: any) {
+      try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+      } catch (createErr) {
+        try {
+          await signInAnonymously(auth);
+        } catch (anonErr) {
+          console.warn('Firebase Auth fallback notice:', anonErr);
+        }
+      }
+    }
+  };
+
   // Strict Login Handler
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setAuthLoading(true);
@@ -81,35 +104,35 @@ export default function PinLockModal({
     const cleanEmail = emailInput.trim().toLowerCase();
     const cleanPassword = passwordInput.trim();
 
-    setTimeout(() => {
-      // 1. Check Super Admin Credentials (Strict Email & Password match)
-      if (cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase() && cleanPassword === SUPER_ADMIN_PASSWORD) {
-        setAuthLoading(false);
-        setEmailInput('');
-        setPasswordInput('');
-        onUnlock('super_admin');
-        showToast('Authenticated as Super Admin! Full Portal Access Granted.', 'success');
-        return;
-      }
-
-      // 2. Check Second Admin Credentials (from combined local & Firestore list)
-      const matchedSecondAdmin = localAdmins.find(
-        (sa) => sa.email.trim().toLowerCase() === cleanEmail && sa.password === cleanPassword
-      );
-
-      if (matchedSecondAdmin) {
-        setAuthLoading(false);
-        setEmailInput('');
-        setPasswordInput('');
-        onUnlock('manager');
-        showToast(`Welcome ${matchedSecondAdmin.name}! Authenticated as Second Admin.`, 'info');
-        return;
-      }
-
-      // 3. Fallback: Access Denied
+    // 1. Check Super Admin Credentials (Strict Email & Password match)
+    if (cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase() && cleanPassword === SUPER_ADMIN_PASSWORD) {
+      await authenticateFirebaseUser(cleanEmail, cleanPassword);
       setAuthLoading(false);
-      setAuthError('Access Denied: Invalid Email or Password. Only authorized GMR Admins can access this portal.');
-    }, 300);
+      setEmailInput('');
+      setPasswordInput('');
+      onUnlock('super_admin');
+      showToast('Authenticated as Super Admin! Full Portal Access Granted.', 'success');
+      return;
+    }
+
+    // 2. Check Second Admin Credentials (from combined local & Firestore list)
+    const matchedSecondAdmin = localAdmins.find(
+      (sa) => sa.email.trim().toLowerCase() === cleanEmail && sa.password === cleanPassword
+    );
+
+    if (matchedSecondAdmin) {
+      await authenticateFirebaseUser(cleanEmail, cleanPassword);
+      setAuthLoading(false);
+      setEmailInput('');
+      setPasswordInput('');
+      onUnlock('manager');
+      showToast(`Welcome ${matchedSecondAdmin.name}! Authenticated as Second Admin.`, 'info');
+      return;
+    }
+
+    // 3. Fallback: Access Denied
+    setAuthLoading(false);
+    setAuthError('Access Denied: Invalid Email or Password. Only authorized GMR Admins can access this portal.');
   };
 
   // Add New Second Admin (Super Admin Only)
