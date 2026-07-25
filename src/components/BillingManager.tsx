@@ -23,7 +23,9 @@ import {
   ShieldCheck,
   UserCheck,
   FileText,
-  Download
+  Download,
+  Trash2,
+  History
 } from 'lucide-react';
 import { Tenant, PaymentLog, PaymentMode, BillingAlert, Property, UserRole } from '../types';
 import { triggerWhatsAppMessage, getReceiptTemplate, getRentReminderTemplate } from '../utils/whatsapp';
@@ -39,6 +41,7 @@ interface BillingManagerProps {
   properties?: Property[];
   selectedPropertyId?: string;
   onAddPayment: (payment: Omit<PaymentLog, 'id'>) => void;
+  onDeletePayment?: (paymentId: string) => void;
   onSendAlert: (alert: BillingAlert) => void;
   showToast?: (msg: string, type?: 'success' | 'info') => void;
 }
@@ -51,6 +54,7 @@ export default function BillingManager({
   properties = [],
   selectedPropertyId = 'all',
   onAddPayment,
+  onDeletePayment,
   onSendAlert,
   showToast = () => {}
 }: BillingManagerProps) {
@@ -62,6 +66,8 @@ export default function BillingManager({
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
   const [selectedAlertForPayment, setSelectedAlertForPayment] = useState<BillingAlert | null>(null);
   const [activeReceiptPayment, setActiveReceiptPayment] = useState<PaymentLog | null>(null);
 
@@ -400,6 +406,18 @@ export default function BillingManager({
             <span>Partner 30-Day PDF</span>
           </button>
 
+          {/* Super Admin Payment History Log Audit Button */}
+          {userRole === 'super_admin' && (
+            <button
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold px-3.5 py-3 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-all border border-neutral-700"
+              title="Manage & Delete Payment History Logs (Super Admin)"
+            >
+              <History className="w-4 h-4 text-amber-400" />
+              <span>All-Time History ({payments.length})</span>
+            </button>
+          )}
+
           {/* Status filters */}
           <div className="inline-flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600">
             <button 
@@ -575,6 +593,19 @@ export default function BillingManager({
                               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                               <span>WhatsApp</span>
                             </button>
+                            {userRole === 'super_admin' && onDeletePayment && rec.paymentLog && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Delete payment history log for ${rec.name} (₹${rec.paymentLog!.amount}) permanently?`)) {
+                                    onDeletePayment(rec.paymentLog!.id);
+                                  }
+                                }}
+                                className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 p-1.5 rounded-lg cursor-pointer transition-colors"
+                                title="Delete Payment History Record (Super Admin)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -887,6 +918,137 @@ export default function BillingManager({
         selectedPropertyId={selectedPropertyId}
         showToast={showToast}
       />
+
+      {/* ── ALL-TIME PAYMENT HISTORY MANAGEMENT MODAL (SUPER ADMIN) ─────── */}
+      {isHistoryModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl border border-neutral-200 shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]"
+          >
+            {/* Header */}
+            <div className="px-6 py-4 bg-neutral-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <History className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-extrabold text-base">Over-Time Payment History Logs</h3>
+                  <p className="text-[11px] text-neutral-400">Total {payments.length} transaction records in Cloud Database</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filter Search */}
+            <div className="p-4 border-b border-neutral-200 bg-neutral-50/50 flex items-center justify-between gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search history by resident name, month, or transaction ref..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                />
+              </div>
+              <span className="text-xs font-bold text-neutral-500 bg-neutral-200/60 px-3 py-1.5 rounded-lg shrink-0">
+                Super Admin Access
+              </span>
+            </div>
+
+            {/* History Table */}
+            <div className="p-4 overflow-y-auto flex-1">
+              {payments.length === 0 ? (
+                <div className="text-center py-12 text-neutral-400 text-sm font-medium">
+                  No historical payment records logged yet.
+                </div>
+              ) : (
+                <div className="border border-neutral-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-neutral-100 text-neutral-500 font-bold uppercase text-[10px] border-b border-neutral-200">
+                        <th className="py-3 px-4">Resident</th>
+                        <th className="py-3 px-4">Month</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Date & Mode</th>
+                        <th className="py-3 px-4">Ref ID</th>
+                        <th className="py-3 px-4 text-right">Delete</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {payments
+                        .filter(p => {
+                          if (!historySearch.trim()) return true;
+                          const t = tenants.find(ten => ten.id === p.tenantId);
+                          const q = historySearch.toLowerCase();
+                          return (
+                            (t && t.name.toLowerCase().includes(q)) ||
+                            p.billingMonth.toLowerCase().includes(q) ||
+                            p.paymentDate.toLowerCase().includes(q) ||
+                            p.paymentMode.toLowerCase().includes(q) ||
+                            (p.referenceId && p.referenceId.toLowerCase().includes(q))
+                          );
+                        })
+                        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+                        .map(p => {
+                          const t = tenants.find(ten => ten.id === p.tenantId);
+                          return (
+                            <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
+                              <td className="py-3 px-4 font-bold text-neutral-900">
+                                {t ? t.name : 'Unknown Resident'}
+                                <span className="text-[10px] text-neutral-400 font-normal block">Room {t?.roomNumber || 'N/A'}</span>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-medium text-neutral-600">{p.billingMonth}</td>
+                              <td className="py-3 px-4 font-extrabold text-emerald-700">₹{p.amount.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-neutral-500">
+                                <span className="block font-mono text-[11px]">{p.paymentDate}</span>
+                                <span className="inline-block bg-neutral-100 text-neutral-600 text-[9px] font-semibold px-1.5 py-0.5 rounded border border-neutral-200 mt-0.5">{p.paymentMode}</span>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[10px] text-neutral-500 truncate max-w-[120px]">{p.referenceId || 'N/A'}</td>
+                              <td className="py-3 px-4 text-right">
+                                {onDeletePayment && (
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`Permanently delete payment entry ₹${p.amount} (${p.billingMonth}) for ${t?.name || 'Resident'}?`)) {
+                                        onDeletePayment(p.id);
+                                      }
+                                    }}
+                                    className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg cursor-pointer transition-colors"
+                                    title="Delete this payment record permanently"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between">
+              <span className="text-xs text-neutral-500 italic">
+                ⚠️ Deleting a payment record removes it permanently from both Cloud Firestore and local storage.
+              </span>
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Close History Manager
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );

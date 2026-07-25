@@ -36,7 +36,9 @@ import {
   deletePropertyInDb,
   saveTenantInDb,
   updateTenantInDb,
+  deleteTenantInDb,
   savePaymentInDb,
+  deletePaymentInDb,
   testFirestoreConnection
 } from './lib/firestoreService';
 
@@ -195,6 +197,15 @@ export default function App() {
     showToast(`Resident ${newTenant.name} registered in Database!`, 'success');
   };
 
+  const handleDeleteTenant = async (tenantId: string) => {
+    const t = tenants.find(item => item.id === tenantId);
+    const tName = t ? t.name : 'Resident';
+    setTenants(prev => prev.filter(item => item.id !== tenantId));
+    if (selectedTenantId === tenantId) setSelectedTenantId(null);
+    await deleteTenantInDb(tenantId);
+    showToast(`Resident history for "${tName}" permanently deleted.`, 'info');
+  };
+
   const handleEditTenant = async (updatedTenant: Tenant) => {
     setTenants(prev => prev.map(t => t.id === updatedTenant.id ? updatedTenant : t));
     await saveTenantInDb(updatedTenant);
@@ -221,6 +232,14 @@ export default function App() {
     // Get tenant name for toast
     const name = tenants.find(t => t.id === newPaymentData.tenantId)?.name || 'Resident';
     showToast(`Collected ₹${newPayment.amount} from ${name}! Saved to Cloud Database.`, 'success');
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    const pay = payments.find(p => p.id === paymentId);
+    const amount = pay ? pay.amount : '';
+    setPayments(prev => prev.filter(p => p.id !== paymentId));
+    await deletePaymentInDb(paymentId);
+    showToast(`Payment log entry ₹${amount} deleted from history.`, 'info');
   };
 
   // Send Custom Billing Alert
@@ -622,6 +641,7 @@ export default function App() {
                 onAddProperty={handleAddProperty}
                 onEditProperty={handleEditProperty}
                 onDeleteProperty={handleDeleteProperty}
+                onDeletePayment={handleDeletePayment}
                 tenants={tenants}
                 payments={payments}
                 billingAlerts={billingAlerts}
@@ -641,7 +661,9 @@ export default function App() {
                 payments={payments}
                 onAddTenant={handleAddTenant}
                 onEditTenant={handleEditTenant}
+                onDeleteTenant={handleDeleteTenant}
                 onCheckOutTenant={handleCheckOutTenant}
+                onDeletePayment={handleDeletePayment}
                 selectedTenantId={selectedTenantId}
                 onSelectTenant={setSelectedTenantId}
               />
@@ -656,6 +678,7 @@ export default function App() {
                 payments={payments}
                 billingAlerts={billingAlerts}
                 onAddPayment={handleAddPayment}
+                onDeletePayment={handleDeletePayment}
                 onSendAlert={handleSendBillingAlert}
                 showToast={showToast}
               />

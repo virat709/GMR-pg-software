@@ -226,6 +226,21 @@ export async function savePaymentInDb(payment: PaymentLog) {
   }
 }
 
+export async function deletePaymentInDb(paymentId: string) {
+  try {
+    const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+    const updated = local.filter(p => p.id !== paymentId);
+    localStorage.setItem('gmr_payments', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await deleteDoc(doc(db, PAYMENTS_COLLECTION, paymentId));
+    console.log('Deleted Payment from Cloud Firestore:', paymentId);
+  } catch (err) {
+    console.error('Firestore Payment delete error:', err);
+  }
+}
+
 // Second Admin CRUD
 export async function saveSecondAdminInDb(admin: SecondAdmin) {
   try {

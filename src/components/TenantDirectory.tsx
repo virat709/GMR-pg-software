@@ -39,7 +39,9 @@ interface TenantDirectoryProps {
   selectedPropertyId?: string;
   onAddTenant: (tenant: Omit<Tenant, 'id'>) => void;
   onEditTenant: (tenant: Tenant) => void;
+  onDeleteTenant?: (tenantId: string) => void;
   onCheckOutTenant: (tenantId: string) => void;
+  onDeletePayment?: (paymentId: string) => void;
   selectedTenantId: string | null;
   onSelectTenant: (tenantId: string | null) => void;
 }
@@ -52,7 +54,9 @@ export default function TenantDirectory({
   selectedPropertyId = 'all',
   onAddTenant,
   onEditTenant,
+  onDeleteTenant,
   onCheckOutTenant,
+  onDeletePayment,
   selectedTenantId,
   onSelectTenant
 }: TenantDirectoryProps) {
@@ -421,6 +425,21 @@ export default function TenantDirectory({
                               </button>
                             )
                           )}
+
+                          {/* Super Admin Permanent Delete Resident History Option */}
+                          {userRole === 'super_admin' && onDeleteTenant && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`⚠️ Permanently delete history record for resident "${tenant.name}"? This cannot be undone.`)) {
+                                  onDeleteTenant(tenant.id);
+                                }
+                              }}
+                              className="p-1.5 hover:bg-red-100 rounded-md text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                              title="Delete Resident Record Permanently (Super Admin)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -649,11 +668,26 @@ export default function TenantDirectory({
                             <span className="font-mono">{pay.paymentDate}</span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="bg-white border border-neutral-200 text-neutral-600 text-[9px] px-1.5 py-0.5 rounded font-medium">
-                            {pay.paymentMode}
-                          </span>
-                          <p className="text-[8px] text-neutral-400 font-mono mt-0.5 overflow-hidden max-w-[90px] truncate">{pay.referenceId}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className="bg-white border border-neutral-200 text-neutral-600 text-[9px] px-1.5 py-0.5 rounded font-medium">
+                              {pay.paymentMode}
+                            </span>
+                            <p className="text-[8px] text-neutral-400 font-mono mt-0.5 overflow-hidden max-w-[90px] truncate">{pay.referenceId}</p>
+                          </div>
+                          {userRole === 'super_admin' && onDeletePayment && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Delete payment log record ₹${pay.amount} (${pay.billingMonth})?`)) {
+                                  onDeletePayment(pay.id);
+                                }
+                              }}
+                              className="p-1 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded transition-colors"
+                              title="Delete Payment Record (Super Admin)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

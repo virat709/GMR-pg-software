@@ -39,6 +39,7 @@ interface DashboardOverviewProps {
   onAddProperty: (newProperty: Omit<Property, 'id'>) => void;
   onEditProperty?: (property: Property) => void;
   onDeleteProperty?: (propertyId: string) => void;
+  onDeletePayment?: (paymentId: string) => void;
   tenants: Tenant[];
   payments: PaymentLog[];
   billingAlerts: BillingAlert[];
@@ -56,6 +57,7 @@ export default function DashboardOverview({
   onAddProperty,
   onEditProperty,
   onDeleteProperty,
+  onDeletePayment,
   tenants,
   payments,
   billingAlerts,
@@ -726,9 +728,24 @@ export default function DashboardOverview({
                           <span className="bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100 text-neutral-500 font-medium text-[10px]">{log.paymentMode}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="font-extrabold text-emerald-600 text-sm">+ ₹{log.amount}</span>
-                        <p className="text-[10px] text-neutral-400">{log.billingMonth}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className="font-extrabold text-emerald-600 text-sm">+ ₹{log.amount}</span>
+                          <p className="text-[10px] text-neutral-400">{log.billingMonth}</p>
+                        </div>
+                        {userRole === 'super_admin' && onDeletePayment && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Delete payment log record (+₹${log.amount}) permanently?`)) {
+                                onDeletePayment(log.id);
+                              }
+                            }}
+                            className="p-1 hover:bg-red-50 text-neutral-300 hover:text-red-600 rounded transition-colors"
+                            title="Delete Payment Log (Super Admin)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
