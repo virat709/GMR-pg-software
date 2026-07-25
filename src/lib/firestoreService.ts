@@ -15,6 +15,18 @@ const TENANTS_COLLECTION = 'tenants';
 const PAYMENTS_COLLECTION = 'payments';
 const SECOND_ADMINS_COLLECTION = 'second_admins';
 
+// Helper to remove any 'undefined' values before passing object to Firestore
+function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      clean[key] = val;
+    }
+  });
+  return clean;
+}
+
 // Subscribe to Properties collection with Fail-Safe Persistence
 export function subscribeProperties(callback: (properties: Property[]) => void) {
   try {
@@ -22,7 +34,10 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
         const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
-        callback(local.length > 0 ? local : initialProperties);
+        const dataToUse = local.length > 0 ? local : initialProperties;
+        callback(dataToUse);
+        // Auto-seed to Firestore if completely empty
+        dataToUse.forEach((p: Property) => savePropertyInDb(p));
       } else {
         const properties: Property[] = snapshot.docs.map((doc) => doc.data() as Property);
         localStorage.setItem('gmr_properties', JSON.stringify(properties));
@@ -123,9 +138,11 @@ export async function savePropertyInDb(property: Property) {
   } catch (e) {}
 
   try {
-    await setDoc(doc(db, PROPERTIES_COLLECTION, property.id), property, { merge: true });
+    const sanitized = cleanForFirestore(property);
+    await setDoc(doc(db, PROPERTIES_COLLECTION, property.id), sanitized, { merge: true });
+    console.log('Saved Property to Cloud Firestore:', property.id);
   } catch (err) {
-    console.warn('Firestore Property save notice:', err);
+    console.error('Firestore Property save error:', err);
   }
 }
 
@@ -138,9 +155,11 @@ export async function saveTenantInDb(tenant: Tenant) {
   } catch (e) {}
 
   try {
-    await setDoc(doc(db, TENANTS_COLLECTION, tenant.id), tenant, { merge: true });
+    const sanitized = cleanForFirestore(tenant);
+    await setDoc(doc(db, TENANTS_COLLECTION, tenant.id), sanitized, { merge: true });
+    console.log('Saved Tenant to Cloud Firestore:', tenant.id);
   } catch (err) {
-    console.warn('Firestore Tenant save notice:', err);
+    console.error('Firestore Tenant save error:', err);
   }
 }
 
@@ -152,9 +171,11 @@ export async function updateTenantInDb(tenantId: string, updates: Partial<Tenant
   } catch (e) {}
 
   try {
-    await updateDoc(doc(db, TENANTS_COLLECTION, tenantId), updates);
+    const sanitized = cleanForFirestore(updates);
+    await updateDoc(doc(db, TENANTS_COLLECTION, tenantId), sanitized);
+    console.log('Updated Tenant in Cloud Firestore:', tenantId);
   } catch (err) {
-    console.warn('Firestore Tenant update notice:', err);
+    console.error('Firestore Tenant update error:', err);
   }
 }
 
@@ -167,8 +188,9 @@ export async function deleteTenantInDb(tenantId: string) {
 
   try {
     await deleteDoc(doc(db, TENANTS_COLLECTION, tenantId));
+    console.log('Deleted Tenant from Cloud Firestore:', tenantId);
   } catch (err) {
-    console.warn('Firestore Tenant delete notice:', err);
+    console.error('Firestore Tenant delete error:', err);
   }
 }
 
@@ -181,9 +203,11 @@ export async function savePaymentInDb(payment: PaymentLog) {
   } catch (e) {}
 
   try {
-    await setDoc(doc(db, PAYMENTS_COLLECTION, payment.id), payment, { merge: true });
+    const sanitized = cleanForFirestore(payment);
+    await setDoc(doc(db, PAYMENTS_COLLECTION, payment.id), sanitized, { merge: true });
+    console.log('Saved Payment to Cloud Firestore:', payment.id);
   } catch (err) {
-    console.warn('Firestore Payment save notice:', err);
+    console.error('Firestore Payment save error:', err);
   }
 }
 
@@ -196,9 +220,11 @@ export async function saveSecondAdminInDb(admin: SecondAdmin) {
   } catch (e) {}
 
   try {
-    await setDoc(doc(db, SECOND_ADMINS_COLLECTION, admin.id), admin, { merge: true });
+    const sanitized = cleanForFirestore(admin);
+    await setDoc(doc(db, SECOND_ADMINS_COLLECTION, admin.id), sanitized, { merge: true });
+    console.log('Saved Second Admin to Cloud Firestore:', admin.id);
   } catch (err) {
-    console.warn('Firestore Second Admin save notice:', err);
+    console.error('Firestore Second Admin save error:', err);
   }
 }
 
@@ -211,7 +237,8 @@ export async function deleteSecondAdminInDb(adminId: string) {
 
   try {
     await deleteDoc(doc(db, SECOND_ADMINS_COLLECTION, adminId));
+    console.log('Deleted Second Admin from Cloud Firestore:', adminId);
   } catch (err) {
-    console.warn('Firestore Second Admin delete notice:', err);
+    console.error('Firestore Second Admin delete error:', err);
   }
 }
