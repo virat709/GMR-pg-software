@@ -4,19 +4,19 @@ import {
   ShieldCheck,
   UserCheck,
   Mail,
+  Lock,
   LogIn,
-  UserPlus,
   Loader2,
   AlertCircle,
-  KeyRound
+  Eye,
+  EyeOff,
+  UserPlus,
+  Trash2,
+  X,
+  CheckCircle2
 } from 'lucide-react';
-import { UserRole } from '../types';
-import { auth, googleProvider } from '../lib/firebase';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup
-} from 'firebase/auth';
+import { UserRole, SecondAdmin } from '../types';
+import { saveSecondAdminInDb, deleteSecondAdminInDb } from '../lib/firestoreService';
 
 interface PinLockModalProps {
   isUnlocked: boolean;
@@ -26,7 +26,11 @@ interface PinLockModalProps {
   showChangePinModal: boolean;
   onCloseChangePinModal: () => void;
   showToast: (msg: string, type?: 'success' | 'info') => void;
+  secondAdmins: SecondAdmin[];
 }
+
+export const SUPER_ADMIN_EMAIL = 'gmrluxurycolivingpg@gmail.com';
+export const SUPER_ADMIN_PASSWORD = 'GMRcoliving@1234';
 
 export default function PinLockModal({
   isUnlocked,
@@ -35,72 +39,110 @@ export default function PinLockModal({
   onLock,
   showChangePinModal,
   onCloseChangePinModal,
-  showToast
+  showToast,
+  secondAdmins
 }: PinLockModalProps) {
-  // Selected Access Role Level
-  const [loginRole, setLoginRole] = useState<UserRole>('super_admin');
-
-  // Email & Password Form State
-  const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  // Login Form State
+  const [emailInput, setEmailInput] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Firebase Email & Password Authentication Handler
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  // Add Second Admin Form State (Super Admin Modal)
+  const [newAdminName, setNewAdminName] = useState<string>('');
+  const [newAdminEmail, setNewAdminEmail] = useState<string>('');
+  const [newAdminPassword, setNewAdminPassword] = useState<string>('');
+  const [adminMgmtError, setAdminMgmtError] = useState<string | null>(null);
+
+  // Strict Login Handler
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setAuthError('Please enter both email address and password.');
+    setAuthError(null);
+    setAuthLoading(true);
+
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim();
+
+    setTimeout(() => {
+      // 1. Check Super Admin Credentials (Strict Email & Password match)
+      if (cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase() && cleanPassword === SUPER_ADMIN_PASSWORD) {
+        setAuthLoading(false);
+        setEmailInput('');
+        setPasswordInput('');
+        onUnlock('super_admin');
+        showToast('Authenticated as Super Admin! Full Portal Access Granted.', 'success');
+        return;
+      }
+
+      // 2. Check Second Admin Credentials (from Firestore list)
+      const matchedSecondAdmin = secondAdmins.find(
+        (sa) => sa.email.trim().toLowerCase() === cleanEmail && sa.password === cleanPassword
+      );
+
+      if (matchedSecondAdmin) {
+        setAuthLoading(false);
+        setEmailInput('');
+        setPasswordInput('');
+        onUnlock('manager');
+        showToast(`Welcome ${matchedSecondAdmin.name}! Authenticated as Second Admin.`, 'info');
+        return;
+      }
+
+      // 3. Fallback: Access Denied
+      setAuthLoading(false);
+      setAuthError('Access Denied: Invalid Email or Password. Only authorized GMR Admins can access this portal.');
+    }, 400);
+  };
+
+  // Add New Second Admin (Super Admin Only)
+  const handleAddSecondAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminMgmtError(null);
+
+    if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword.trim()) {
+      setAdminMgmtError('Please fill in all fields (Name, Email, Password).');
       return;
     }
 
-    setAuthLoading(true);
-    setAuthError(null);
-
-    try {
-      if (isRegisterMode) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        showToast(`Account registered! Authenticated as ${loginRole === 'super_admin' ? 'Super Admin' : 'Second Admin'}`, 'success');
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        showToast(`Welcome! Logged in as ${loginRole === 'super_admin' ? 'Super Admin' : 'Second Admin'}`, 'success');
-      }
-      setAuthLoading(false);
-      onUnlock(loginRole);
-    } catch (err: any) {
-      setAuthLoading(false);
-      setAuthError(err.message || 'Firebase Authentication failed. Please verify credentials.');
+    if (newAdminEmail.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      setAdminMgmtError('This email is reserved for Super Admin.');
+      return;
     }
+
+    const newAdmin: SecondAdmin = {
+      id: 'admin_' + Math.random().toString(36).substring(2, 9),
+      name: newAdminName.trim(),
+      email: newAdminEmail.trim().toLowerCase(),
+      password: newAdminPassword.trim(),
+      addedAt: new Date().toISOString().split('T')[0]
+    };
+
+    await saveSecondAdminInDb(newAdmin);
+    showToast(`Second Admin "${newAdmin.name}" added successfully!`, 'success');
+    setNewAdminName('');
+    setNewAdminEmail('');
+    setNewAdminPassword('');
   };
 
-  // Firebase Google Sign-In Handler
-  const handleGoogleAuth = async () => {
-    setAuthLoading(true);
-    setAuthError(null);
-
-    try {
-      const res = await signInWithPopup(auth, googleProvider);
-      const user = res.user;
-      showToast(`Signed in as ${user.displayName || user.email} (${loginRole === 'super_admin' ? 'Super Admin' : 'Second Admin'})`, 'success');
-      setAuthLoading(false);
-      onUnlock(loginRole);
-    } catch (err: any) {
-      setAuthLoading(false);
-      setAuthError(err.message || 'Google Sign-In cancelled or popup blocked.');
+  // Delete Second Admin
+  const handleDeleteSecondAdmin = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to revoke access for Second Admin "${name}"?`)) {
+      await deleteSecondAdminInDb(id);
+      showToast(`Revoked access for Second Admin "${name}".`, 'info');
     }
   };
 
   return (
     <>
-      {/* FULL-SCREEN GMR BRANDED AUTHENTICATION OVERLAY */}
+      {/* 1. FULL-SCREEN GMR SECURE AUTHENTICATION OVERLAY */}
       <AnimatePresence>
         {!isUnlocked && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-2xl flex items-center justify-center p-4 overflow-y-auto"
             id="gmr-auth-fullscreen-overlay"
           >
             <motion.div
@@ -123,51 +165,15 @@ export default function PinLockModal({
                 />
               </div>
 
-              {/* BRAND HEADING & TAGLINE */}
-              <h2 className="text-xl sm:text-2xl font-black text-[#06582a] bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-amber-300 to-yellow-400 tracking-wide uppercase">
+              {/* BRAND HEADING */}
+              <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-amber-300 to-yellow-400 tracking-wide uppercase">
                 GMR Luxury Co-Living
               </h2>
-              <p className="text-xs text-neutral-400 font-semibold tracking-wider uppercase mb-5 mt-0.5">
-                Feels like home • Management System
+              <p className="text-xs text-neutral-400 font-semibold tracking-wider uppercase mb-6 mt-0.5">
+                Portal Authentication
               </p>
 
-              {/* SELECT ACCESS ROLE LEVEL */}
-              <div className="text-left mb-4">
-                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide block mb-1.5">
-                  Select Access Level
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLoginRole('super_admin')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                      loginRole === 'super_admin'
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-md shadow-amber-500/10'
-                        : 'bg-neutral-800/80 border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-                    }`}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    <span>Super Admin</span>
-                    <span className="text-[9px] font-normal text-neutral-400">All Access</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setLoginRole('manager')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                      loginRole === 'manager'
-                        ? 'bg-blue-500/20 border-blue-400 text-blue-300 shadow-md shadow-blue-500/10'
-                        : 'bg-neutral-800/80 border-neutral-700 text-neutral-400 hover:bg-neutral-800'
-                    }`}
-                  >
-                    <UserCheck className="w-4 h-4 text-blue-400" />
-                    <span>Second Admin</span>
-                    <span className="text-[9px] font-normal text-neutral-400">Limited Access</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* AUTH ERROR DISPLAY */}
+              {/* AUTH ERROR ALERT */}
               {authError && (
                 <motion.div
                   initial={{ opacity: 0, y: -5 }}
@@ -179,107 +185,216 @@ export default function PinLockModal({
                 </motion.div>
               )}
 
-              {/* EMAIL & PASSWORD AUTHENTICATION FORM */}
-              <form onSubmit={handleEmailAuth} className="space-y-3.5 text-left">
+              {/* SECURE EMAIL & PASSWORD LOGIN FORM */}
+              <form onSubmit={handleLoginSubmit} className="space-y-4 text-left">
                 <div>
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase block mb-1">
-                    Email Address
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide block mb-1">
+                    Admin Email Address
                   </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="admin@gmrluxury.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-xs focus:outline-none focus:border-yellow-400 transition-colors"
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      required
+                      placeholder="gmrluxurycolivingpg@gmail.com"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-xs focus:outline-none focus:border-yellow-400 transition-colors"
+                    />
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase block mb-1">
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide block mb-1">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-xs focus:outline-none focus:border-yellow-400 transition-colors"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-xs focus:outline-none focus:border-yellow-400 transition-colors font-mono"
+                    />
+                    <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-neutral-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-amber-500 to-yellow-500 text-neutral-950 font-black text-xs hover:opacity-95 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-1"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-amber-500 to-yellow-500 text-neutral-950 font-black text-xs hover:opacity-95 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
                 >
                   {authLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-neutral-950" />
-                  ) : isRegisterMode ? (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      <span>Register & Open Portal</span>
-                    </>
                   ) : (
                     <>
                       <LogIn className="w-4 h-4" />
-                      <span>Sign In & Open Portal</span>
+                      <span>Sign In to GMR Portal</span>
                     </>
                   )}
                 </button>
               </form>
 
-              {/* MODE SWITCHER LINK */}
-              <div className="text-center pt-2">
+              {/* SECURITY INFO FOOTER */}
+              <div className="mt-6 pt-4 border-t border-neutral-800 text-[10px] text-neutral-400 flex items-center justify-between">
+                <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Super Admin & Second Admin Protected</span>
+                </span>
+                <span className="text-neutral-500">v2.0</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 2. SECOND ADMIN MANAGEMENT MODAL (FOR SUPER ADMIN ONLY) */}
+      <AnimatePresence>
+        {showChangePinModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg shadow-2xl text-neutral-900 border border-neutral-100 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-neutral-900 text-yellow-400 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-neutral-900 text-base">Second Admin Access Control</h3>
+                    <p className="text-xs text-neutral-500 font-medium">Add or Revoke Second Admin Credentials</p>
+                  </div>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegisterMode(!isRegisterMode);
-                    setAuthError(null);
-                  }}
-                  className="text-xs text-neutral-400 hover:text-white underline cursor-pointer"
+                  onClick={onCloseChangePinModal}
+                  className="p-1.5 hover:bg-neutral-100 text-neutral-400 rounded-xl cursor-pointer"
                 >
-                  {isRegisterMode ? "Already have an account? Sign In" : "Need a new account? Register"}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* GOOGLE SIGN-IN DIVIDER */}
-              <div className="relative flex items-center justify-center my-4">
-                <div className="border-t border-neutral-800 w-full" />
-                <span className="bg-neutral-900 px-2.5 text-[10px] font-bold uppercase text-neutral-500 shrink-0">OR</span>
-                <div className="border-t border-neutral-800 w-full" />
-              </div>
+              {/* ADD NEW SECOND ADMIN FORM */}
+              <form onSubmit={handleAddSecondAdmin} className="bg-neutral-50 p-4 rounded-2xl border border-neutral-200 mb-5 space-y-3">
+                <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Create New Second Admin</span>
+                </h4>
 
-              {/* GOOGLE SIGN-IN BUTTON */}
-              <button
-                type="button"
-                onClick={handleGoogleAuth}
-                disabled={authLoading}
-                className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-sm"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                {adminMgmtError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>{adminMgmtError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">
+                      Admin Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Manager"
+                      value={newAdminName}
+                      onChange={(e) => setNewAdminName(e.target.value)}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">
+                      Gmail Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="ramesh@gmail.com"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">
+                    Assign Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Assign Second Admin Password"
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono"
                   />
-                  <path
-                    fill="#4285F4"
-                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12s.7 2.3 1.9 4.7l3.7-2.9z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
-                  />
-                </svg>
-                <span>Sign in with Google</span>
-              </button>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-xs hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Grant Second Admin Access</span>
+                </button>
+              </form>
+
+              {/* LIST OF REGISTERED SECOND ADMINS */}
+              <div>
+                <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wide mb-2 flex items-center justify-between">
+                  <span>Active Second Admins ({secondAdmins.length})</span>
+                </h4>
+
+                {secondAdmins.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic text-center py-4 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
+                    No Second Admins added yet. Only Super Admin has access.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {secondAdmins.map((admin) => (
+                      <div
+                        key={admin.id}
+                        className="p-3 bg-neutral-50 border border-neutral-200 rounded-2xl flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div>
+                          <div className="font-bold text-neutral-900 flex items-center gap-1.5">
+                            <span>{admin.name}</span>
+                            <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                              Second Admin
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-neutral-500 font-mono mt-0.5">
+                            {admin.email}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSecondAdmin(admin.id, admin.name)}
+                          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors cursor-pointer"
+                          title="Revoke Admin Access"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

@@ -23,7 +23,7 @@ import {
   UserCheck,
   ShieldAlert
 } from 'lucide-react';
-import { Tenant, PaymentLog, BillingAlert, Property, UserRole } from './types';
+import { Tenant, PaymentLog, BillingAlert, Property, UserRole, SecondAdmin } from './types';
 import { initialTenants, initialPayments, initialProperties } from './mockData';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
@@ -31,6 +31,7 @@ import {
   subscribeProperties,
   subscribeTenants,
   subscribePayments,
+  subscribeSecondAdmins,
   savePropertyInDb,
   saveTenantInDb,
   updateTenantInDb,
@@ -100,6 +101,7 @@ export default function App() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
+  const [secondAdmins, setSecondAdmins] = useState<SecondAdmin[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   // Notification Toast state
@@ -133,11 +135,13 @@ export default function App() {
     const unsubProp = subscribeProperties((data) => setProperties(data));
     const unsubTenant = subscribeTenants((data) => setTenants(data));
     const unsubPay = subscribePayments((data) => setPayments(data));
+    const unsubAdmin = subscribeSecondAdmins((data) => setSecondAdmins(data));
 
     return () => {
       unsubProp();
       unsubTenant();
       unsubPay();
+      unsubAdmin();
     };
   }, []);
 
@@ -248,6 +252,7 @@ export default function App() {
         showChangePinModal={showChangePinModal}
         onCloseChangePinModal={() => setShowChangePinModal(false)}
         showToast={showToast}
+        secondAdmins={secondAdmins}
       />
 
       {/* Toast Overlay Notice Banner */}
@@ -360,28 +365,34 @@ export default function App() {
           })}
         </nav>
 
-        {/* Security PIN Controls Section */}
+        {/* Portal Security Section */}
         <div className="px-4 py-3 border-t border-neutral-800 space-y-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-1">
-            <span>Security PIN</span>
-            <span className="text-emerald-400 font-mono">Active</span>
+            <span>Portal Security</span>
+            <span className="text-emerald-400 font-mono">Encrypted</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => setShowChangePinModal(true)}
-              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700/70 rounded-xl py-2 px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              title="Change 4-digit Master Security PIN"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-              <span>Set PIN</span>
-            </button>
+            {userRole === 'super_admin' ? (
+              <button
+                onClick={() => setShowChangePinModal(true)}
+                className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700/70 rounded-xl py-2 px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                title="Manage Second Admins"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                <span>Second Admins</span>
+              </button>
+            ) : (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl py-2 px-2.5 text-[10px] text-neutral-500 font-semibold text-center flex items-center justify-center">
+                Manager Access
+              </div>
+            )}
             <button
               onClick={handleLock}
               className="bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-800/50 rounded-xl py-2 px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              title="Lock Manager Portal"
+              title="Sign Out of Portal"
             >
               <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span>Lock</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>

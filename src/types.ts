@@ -4,6 +4,14 @@ export type PropertyType = 'Co-Living' | 'Boys PG' | 'Girls PG' | 'Luxury Apartm
 
 export type UserRole = 'super_admin' | 'manager';
 
+export interface SecondAdmin {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  addedAt: string;
+}
+
 export interface Property {
   id: string;
   name: string;

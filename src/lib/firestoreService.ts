@@ -8,12 +8,13 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Property, Tenant, PaymentLog } from '../types';
+import { Property, Tenant, PaymentLog, SecondAdmin } from '../types';
 import { initialProperties, initialTenants, initialPayments } from '../mockData';
 
 const PROPERTIES_COLLECTION = 'properties';
 const TENANTS_COLLECTION = 'tenants';
 const PAYMENTS_COLLECTION = 'payments';
+const SECOND_ADMINS_COLLECTION = 'second_admins';
 
 // Clean database to keep ONLY the main original property (GMR Main Branch)
 export async function purgeAllDummyData() {
@@ -58,8 +59,22 @@ export async function seedInitialData() {
   try {
     const propSnap = await getDocs(collection(db, PROPERTIES_COLLECTION));
     if (propSnap.empty) {
-      for (const prop of initialProperties) {
-        await setDoc(doc(db, PROPERTIES_COLLECTION, prop.id), prop);
+      for (const p of initialProperties) {
+        await setDoc(doc(db, PROPERTIES_COLLECTION, p.id), p);
+      }
+    }
+
+    const tenantSnap = await getDocs(collection(db, TENANTS_COLLECTION));
+    if (tenantSnap.empty) {
+      for (const t of initialTenants) {
+        await setDoc(doc(db, TENANTS_COLLECTION, t.id), t);
+      }
+    }
+
+    const paySnap = await getDocs(collection(db, PAYMENTS_COLLECTION));
+    if (paySnap.empty) {
+      for (const pay of initialPayments) {
+        await setDoc(doc(db, PAYMENTS_COLLECTION, pay.id), pay);
       }
     }
   } catch (err) {
@@ -73,7 +88,6 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
     const colRef = collection(db, PROPERTIES_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
-        seedInitialData();
         callback(initialProperties);
       } else {
         const properties: Property[] = snapshot.docs.map((doc) => doc.data() as Property);
@@ -134,6 +148,24 @@ export function subscribePayments(callback: (payments: PaymentLog[]) => void) {
   }
 }
 
+// Subscribe to Second Admins collection
+export function subscribeSecondAdmins(callback: (admins: SecondAdmin[]) => void) {
+  try {
+    const colRef = collection(db, SECOND_ADMINS_COLLECTION);
+    return onSnapshot(colRef, (snapshot) => {
+      const admins: SecondAdmin[] = snapshot.docs.map((doc) => doc.data() as SecondAdmin);
+      callback(admins);
+    }, (error) => {
+      console.warn('SecondAdmins snapshot notice:', error?.message || error);
+      callback([]);
+    });
+  } catch (err) {
+    console.warn('SecondAdmins subscription error:', err);
+    callback([]);
+    return () => {};
+  }
+}
+
 // Property CRUD
 export async function savePropertyInDb(property: Property) {
   await setDoc(doc(db, PROPERTIES_COLLECTION, property.id), property, { merge: true });
@@ -155,4 +187,13 @@ export async function deleteTenantInDb(tenantId: string) {
 // Payment CRUD
 export async function savePaymentInDb(payment: PaymentLog) {
   await setDoc(doc(db, PAYMENTS_COLLECTION, payment.id), payment, { merge: true });
+}
+
+// Second Admin CRUD
+export async function saveSecondAdminInDb(admin: SecondAdmin) {
+  await setDoc(doc(db, SECOND_ADMINS_COLLECTION, admin.id), admin, { merge: true });
+}
+
+export async function deleteSecondAdminInDb(adminId: string) {
+  await deleteDoc(doc(db, SECOND_ADMINS_COLLECTION, adminId));
 }
