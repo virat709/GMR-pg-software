@@ -1,42 +1,50 @@
 @import "tailwindcss";
 
 /* 
- * GMR Luxury Co-Living PG - 70% Blue, 30% White, 2% Required Colors Theme
+ * GMR Luxury Co-Living PG - Official Emerald Green & Charcoal Theme
+ * Brand Colors:
+ * - Emerald Green: #06582a
+ * - Charcoal Black: #111827
+ * - Soft Mint Off-white: #f4f8f5
  */
 
+.font-script {
+  font-family: 'Caveat', cursive, sans-serif;
+}
+
 .theme-light {
-  --bg-app: #e0f2fe;        /* 70% Blue: Soft, welcoming sky-blue page background */
-  --bg-sidebar: #1e3a8a;    /* 70% Blue: Strong, professional royal blue sidebar */
-  --bg-card: #ffffff;       /* 30% White: Pure white cards and main sheets */
-  --bg-input: #ffffff;      /* 30% White: Pure white input fields */
-  --bg-hover: #bae6fd;      /* Light active sky blue */
-  --text-main: #1e3a8a;     /* Deep navy blue for high contrast text readability */
-  --text-muted: #2563eb;    /* Active slate blue for supporting details */
-  --border-theme: #93c5fd;  /* Soft sky-blue border guidelines */
-  --accent-blue: #0284c7;   /* Clear oceanic blue */
+  --bg-app: #f4f8f5;        /* Soft emerald-tinted off-white page background */
+  --bg-sidebar: #06582a;    /* Rich forest green sidebar matching official logo */
+  --bg-card: #ffffff;       /* Pure pristine white cards */
+  --bg-input: #ffffff;      /* Pure white inputs */
+  --bg-hover: #e6f4ec;      /* Soft active mint hover */
+  --text-main: #111827;     /* Deep charcoal black text for high legibility */
+  --text-muted: #06582a;    /* Deep emerald green for active accents and subheadings */
+  --border-theme: #d1fae5;  /* Light mint border lines */
+  --accent-green: #06582a;  /* Brand Forest Green */
+  --accent-dark: #111827;   /* Brand Charcoal Black */
   --text-white-fixed: #ffffff;
   
-  /* 2% Required operational indicators (pass WCAG AA contrast) */
-  --bg-badge-success: #10b981; 
+  --bg-badge-success: #059669; 
   --text-badge-success: #ffffff;
   --bg-badge-alert: #ef4444;
   --text-badge-alert: #ffffff;
 }
 
 .theme-dark {
-  --bg-app: #0f172a;        /* 70% Blue: Deep midnight space-blue background */
-  --bg-sidebar: #020617;    /* 70% Blue: Darkest navy-blue sidebar */
-  --bg-card: #1e293b;       /* 30% White: Crisp slate-blue cards for high contrast, but let's make it look blue-tinted white or silver-blue for the 30% white ratio */
-  --bg-input: #1e293b;
-  --bg-hover: #334155;
-  --text-main: #f8fafc;     /* 30% White: Brilliant icy-white text labels and actions */
-  --text-muted: #38bdf8;    /* Luminous sky-blue descriptions */
-  --border-theme: #475569;  /* Cool steel-blue divider lines */
-  --accent-blue: #38bdf8;   /* Brilliant vivid blue highlights */
+  --bg-app: #06140d;        /* Deep midnight forest-emerald background */
+  --bg-sidebar: #032111;    /* Dark forest sidebar */
+  --bg-card: #0d261a;       /* Dark emerald card background */
+  --bg-input: #0f3020;
+  --bg-hover: #163b29;
+  --text-main: #f0fdf4;     /* Crisp off-white text */
+  --text-muted: #34d399;    /* Bright mint-emerald subheadings */
+  --border-theme: #1b4d35;  /* Deep forest divider lines */
+  --accent-green: #34d399;  /* Vivid emerald highlights */
+  --accent-dark: #000000;
   --text-white-fixed: #ffffff;
   
-  /* 2% Required operational indicators */
-  --bg-badge-success: #22c55e;
+  --bg-badge-success: #10b981;
   --text-badge-success: #ffffff;
   --bg-badge-alert: #ef4444;
   --text-badge-alert: #ffffff;
@@ -52,9 +60,10 @@
 /* Global body backgrounds mapping */
 #root, body, html {
   background-color: var(--bg-app);
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Map cards to the 30% White background */
+/* Map cards to card background */
 .theme-light .bg-white,
 .theme-dark .bg-white,
 .theme-light .bg-slate-50,
@@ -78,7 +87,7 @@
   background-color: var(--bg-hover) !important;
 }
 
-/* Sidebars (using 70% deep blue variables) */
+/* Sidebars (using deep emerald green variables) */
 #desktop-sidebar, #mobile-drawer, #mobile-header {
   background-color: var(--bg-sidebar) !important;
   border-color: var(--border-theme) !important;
@@ -86,23 +95,24 @@
 
 /* Ensure sidebar text and navigation links stand out beautifully */
 #desktop-sidebar button, #mobile-drawer button {
-  color: #93c5fd !important;
+  color: #a7f3d0 !important;
 }
 #desktop-sidebar button:hover, #mobile-drawer button:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(255, 255, 255, 0.15) !important;
   color: #ffffff !important;
 }
 #desktop-sidebar button[id*="active"], 
 #desktop-sidebar button.bg-white, 
 #mobile-drawer button.bg-white {
-  background-color: var(--bg-card) !important;
-  color: var(--text-main) !important;
+  background-color: #ffffff !important;
+  color: #06582a !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 /* Force standard navigation item text in the sidebar */
 .theme-light #desktop-sidebar .text-neutral-400,
 .theme-dark #desktop-sidebar .text-neutral-400 {
-  color: #93c5fd !important;
+  color: #a7f3d0 !important;
 }
 
 /* Map all general input, selects, and textareas */
@@ -120,7 +130,7 @@
 .theme-light input::placeholder,
 .theme-dark input::placeholder {
   color: var(--text-muted) !important;
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 /* Dynamic Borders */
@@ -171,15 +181,15 @@
   font-weight: 700 !important;
 }
 
-/* Accent blue branding elements */
+/* Accent blue branding elements mapped to brand emerald green */
 .theme-light .text-blue-600,
 .theme-dark .text-blue-600,
 .theme-light .text-indigo-600,
 .theme-dark .text-indigo-600 {
-  color: var(--accent-blue) !important;
+  color: var(--accent-green) !important;
 }
 
-/* Badges & Required Operational Colors (strictly limited to 2%) */
+/* Badges & Required Operational Colors */
 .theme-light .bg-emerald-50,
 .theme-dark .bg-emerald-50,
 .theme-light .bg-emerald-100,

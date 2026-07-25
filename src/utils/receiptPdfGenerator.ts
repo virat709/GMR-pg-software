@@ -31,7 +31,7 @@ export function generateReceiptPDF({
   const branchAddr = propertyAddress || '#7 Akash Nagar Main Road, Mahadevapura, Bengaluru';
 
   // 1. TOP HEADER BANNER
-  doc.setFillColor(24, 24, 27); // Dark Neutral 900
+  doc.setFillColor(6, 88, 42); // Brand Emerald Green #06582a
   doc.rect(0, 0, 148, 28, 'F');
 
   doc.setTextColor(255, 255, 255);
@@ -41,7 +41,7 @@ export function generateReceiptPDF({
 
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(200, 200, 200);
+  doc.setTextColor(230, 245, 235);
   doc.text(branchAddr.substring(0, 58), 10, 17);
   doc.text('Ph: +91 99515 13796 / +91 70360 19865  |  Feels Like Home', 10, 22);
 
@@ -100,7 +100,7 @@ export function generateReceiptPDF({
     ],
     theme: 'grid',
     headStyles: {
-      fillColor: [16, 185, 129],
+      fillColor: [6, 88, 42],
       textColor: [255, 255, 255],
       fontSize: 8,
       fontStyle: 'bold'

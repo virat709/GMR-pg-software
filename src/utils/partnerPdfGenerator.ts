@@ -54,7 +54,7 @@ export function generate30DayPartnerPDF({
     : (properties.find(p => p.id === selectedPropertyId)?.name || 'Property Branch');
 
   // 1. HEADER SECTION
-  doc.setFillColor(24, 24, 27);
+  doc.setFillColor(6, 88, 42); // Brand Emerald Green #06582a
   doc.rect(0, 0, 210, 36, 'F');
 
   doc.setTextColor(255, 255, 255);

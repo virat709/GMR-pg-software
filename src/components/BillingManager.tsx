@@ -749,20 +749,10 @@ export default function BillingManager({
                 {/* Header */}
                 <div className="text-center pb-4 border-b-2 border-dashed border-neutral-200 space-y-1">
                   <div className="flex items-center justify-center gap-2 text-neutral-900 font-extrabold text-base tracking-wide">
-                    <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#0b75c8]" fill="currentColor">
-                      <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" fill="currentColor" />
-                      <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" fill="currentColor" />
-                      <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" fill="currentColor" />
-                      <path d="M50,25 C34,35 32,50 40,62 C45,52 47,40 50,25 Z" fill="currentColor" />
-                      <path d="M50,25 C66,35 68,50 60,62 C55,52 53,40 50,25 Z" fill="currentColor" />
-                      <path d="M50,33 C26,42 25,58 35,66 C40,58 44,48 50,33 Z" fill="currentColor" />
-                      <path d="M50,33 C74,42 75,58 65,66 C60,58 56,48 50,33 Z" fill="currentColor" />
-                      <path d="M22,70 C40,55 60,80 78,65 C60,74 40,60 22,70 Z" fill="currentColor" />
-                      <path d="M18,78 C38,62 62,88 82,72 C62,81 38,67 18,78 Z" fill="currentColor" />
-                    </svg>
-                    <span>GMR LUXURY PG</span>
+                    <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-9 h-9 object-contain shrink-0" />
+                    <span className="text-[#06582a]">GMR LUXURY PG</span>
                   </div>
-                  <p className="text-[9px] text-[#0b75c8] font-bold uppercase tracking-widest">Feels Like Home</p>
+                  <p className="text-[13px] text-[#06582a] font-bold tracking-widest font-script">Feels like home</p>
                   <p className="text-[10px] text-neutral-500 font-medium">#7 Akash Nagar Main Road, A Narayanapura, Mahadevapura, Bengaluru - 560093</p>
                   <p className="text-[9px] text-neutral-400 font-mono">Ph: +91 99515 13796 | +91 70360 19865</p>
                   <p className="text-[9px] text-neutral-400 font-mono">Email: nagendranagiii955@gmail.com</p>

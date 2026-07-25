@@ -289,13 +289,13 @@ export default function App() {
       {/* LEFT SIDEBAR: Desktop Layout (Hidden on printing) */}
       <aside className="hidden md:flex flex-col w-64 h-full overflow-y-auto bg-neutral-900 text-neutral-300 border-r border-neutral-800 shrink-0 select-none print:hidden" id="desktop-sidebar">
         {/* Branding header */}
-        <div className="p-5 border-b border-neutral-800 flex items-center gap-3 bg-neutral-950/40">
+        <div className="p-4 border-b border-neutral-800 flex items-center gap-3 bg-neutral-950/40">
           <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1 shrink-0 shadow-md border border-emerald-600/30">
             <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-extrabold text-white text-sm tracking-wide">GMR Co-Living</h1>
-            <p className="text-[10px] text-emerald-400 font-bold tracking-wider italic">Feels like home</p>
+            <h1 className="font-extrabold text-white text-sm tracking-wide">GRM coliving</h1>
+            <p className="text-[14px] text-emerald-300 font-bold tracking-wider font-script">Feels like home</p>
           </div>
         </div>
 
@@ -433,8 +433,8 @@ export default function App() {
             <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <span className="font-extrabold text-white text-sm tracking-wide block leading-none">GMR Co-Living</span>
-            <span className="text-[9px] text-emerald-400 font-bold tracking-wider italic">Feels like home</span>
+            <span className="font-extrabold text-white text-sm tracking-wide block leading-none">GRM coliving</span>
+            <span className="text-[12px] text-emerald-300 font-bold tracking-wider font-script block mt-0.5">Feels like home</span>
           </div>
         </div>
 
