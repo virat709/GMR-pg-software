@@ -36,7 +36,7 @@ import {
   saveTenantInDb,
   updateTenantInDb,
   savePaymentInDb,
-  purgeAllDummyData
+  testFirestoreConnection
 } from './lib/firestoreService';
 
 // Component imports
@@ -129,6 +129,13 @@ export default function App() {
 
   // Subscribe to Cloud Firestore database on mount
   useEffect(() => {
+    // Ping Cloud Firestore test document
+    testFirestoreConnection().then(res => {
+      if (!res.success) {
+        console.warn('Firestore Cloud database ping notice:', res.error);
+      }
+    });
+
     const unsubProp = subscribeProperties((data) => setProperties(data));
     const unsubTenant = subscribeTenants((data) => setTenants(data));
     const unsubPay = subscribePayments((data) => setPayments(data));

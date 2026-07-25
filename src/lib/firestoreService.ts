@@ -242,3 +242,20 @@ export async function deleteSecondAdminInDb(adminId: string) {
     console.error('Firestore Second Admin delete error:', err);
   }
 }
+
+// Test Connection Function
+export async function testFirestoreConnection(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const testDocRef = doc(db, 'system_status', 'ping');
+    await setDoc(testDocRef, {
+      lastPing: new Date().toISOString(),
+      status: 'Connected to GMR Co-Living Software',
+      projectId: 'gmr-accounts'
+    });
+    console.log('✅ Firestore Database Ping Successful! Project: gmr-accounts');
+    return { success: true };
+  } catch (err: any) {
+    console.error('❌ Firestore Database Ping Failed:', err);
+    return { success: false, error: err?.message || String(err) };
+  }
+}
