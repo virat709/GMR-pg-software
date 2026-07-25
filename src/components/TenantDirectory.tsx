@@ -249,9 +249,13 @@ export default function TenantDirectory({
   // Filter tenants
   const filteredTenants = tenants.filter(t => {
     const matchesProperty = !selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId;
-    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          t.roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          t.phone.includes(searchTerm);
+    const name = t.name || '';
+    const room = t.roomNumber || '';
+    const phone = t.phone || '';
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = name.toLowerCase().includes(searchLower) || 
+                          room.toLowerCase().includes(searchLower) ||
+                          phone.includes(searchTerm);
     const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
     return matchesProperty && matchesSearch && matchesStatus;
   });

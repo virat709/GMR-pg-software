@@ -328,8 +328,11 @@ export default function BillingManager({
 
   // Filter records
   const filteredRecords = displayBillingRecords.filter(rec => {
-    const matchesSearch = rec.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          rec.roomNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = rec.name || '';
+    const room = rec.roomNumber || '';
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = name.toLowerCase().includes(searchLower) || 
+                          room.toLowerCase().includes(searchLower);
     const matchesStatus = statusFilter === 'All' || rec.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
