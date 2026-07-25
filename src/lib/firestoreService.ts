@@ -4,8 +4,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  onSnapshot,
-  getDocs
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Property, Tenant, PaymentLog, SecondAdmin } from '../types';
@@ -16,134 +15,80 @@ const TENANTS_COLLECTION = 'tenants';
 const PAYMENTS_COLLECTION = 'payments';
 const SECOND_ADMINS_COLLECTION = 'second_admins';
 
-// Clean database to keep ONLY the main original property (GMR Main Branch)
-export async function purgeAllDummyData() {
-  try {
-    // 1. Ensure prop_1 exists
-    await setDoc(doc(db, PROPERTIES_COLLECTION, initialProperties[0].id), initialProperties[0], { merge: true });
-
-    // 2. Remove extra dummy properties if present
-    const propSnap = await getDocs(collection(db, PROPERTIES_COLLECTION));
-    for (const d of propSnap.docs) {
-      if (d.id !== 'prop_1') {
-        await deleteDoc(doc(db, PROPERTIES_COLLECTION, d.id));
-      }
-    }
-
-    // 3. Remove dummy tenants (t1..t6) if present
-    const dummyTenantIds = ['t1', 't2', 't3', 't4', 't5', 't6'];
-    for (const tid of dummyTenantIds) {
-      try {
-        await deleteDoc(doc(db, TENANTS_COLLECTION, tid));
-      } catch (e) {
-        // ignore if already deleted
-      }
-    }
-
-    // 4. Remove dummy payments (pay_1..pay_4) if present
-    const dummyPaymentIds = ['pay_1', 'pay_2', 'pay_3', 'pay_4'];
-    for (const pid of dummyPaymentIds) {
-      try {
-        await deleteDoc(doc(db, PAYMENTS_COLLECTION, pid));
-      } catch (e) {
-        // ignore if already deleted
-      }
-    }
-  } catch (err) {
-    console.warn('Firestore purge notice:', err);
-  }
-}
-
-// Seed initial mock data into Firestore if empty
-export async function seedInitialData() {
-  try {
-    const propSnap = await getDocs(collection(db, PROPERTIES_COLLECTION));
-    if (propSnap.empty) {
-      for (const p of initialProperties) {
-        await setDoc(doc(db, PROPERTIES_COLLECTION, p.id), p);
-      }
-    }
-
-    const tenantSnap = await getDocs(collection(db, TENANTS_COLLECTION));
-    if (tenantSnap.empty) {
-      for (const t of initialTenants) {
-        await setDoc(doc(db, TENANTS_COLLECTION, t.id), t);
-      }
-    }
-
-    const paySnap = await getDocs(collection(db, PAYMENTS_COLLECTION));
-    if (paySnap.empty) {
-      for (const pay of initialPayments) {
-        await setDoc(doc(db, PAYMENTS_COLLECTION, pay.id), pay);
-      }
-    }
-  } catch (err) {
-    console.warn('Firestore seed notice:', err);
-  }
-}
-
-// Subscribe to Properties collection
+// Subscribe to Properties collection with Fail-Safe Persistence
 export function subscribeProperties(callback: (properties: Property[]) => void) {
   try {
     const colRef = collection(db, PROPERTIES_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
-        callback(initialProperties);
+        const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+        callback(local.length > 0 ? local : initialProperties);
       } else {
         const properties: Property[] = snapshot.docs.map((doc) => doc.data() as Property);
+        localStorage.setItem('gmr_properties', JSON.stringify(properties));
         callback(properties);
       }
     }, (error) => {
       console.warn('Properties snapshot notice:', error?.message || error);
-      callback(initialProperties);
+      const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+      callback(local.length > 0 ? local : initialProperties);
     });
   } catch (err) {
     console.warn('Properties subscription error:', err);
-    callback(initialProperties);
+    const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+    callback(local.length > 0 ? local : initialProperties);
     return () => {};
   }
 }
 
-// Subscribe to Tenants collection
+// Subscribe to Tenants collection with Fail-Safe Persistence
 export function subscribeTenants(callback: (tenants: Tenant[]) => void) {
   try {
     const colRef = collection(db, TENANTS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
-        callback(initialTenants);
+        const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+        callback(local.length > 0 ? local : initialTenants);
       } else {
         const tenants: Tenant[] = snapshot.docs.map((doc) => doc.data() as Tenant);
+        localStorage.setItem('gmr_tenants', JSON.stringify(tenants));
         callback(tenants);
       }
     }, (error) => {
       console.warn('Tenants snapshot notice:', error?.message || error);
-      callback(initialTenants);
+      const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+      callback(local.length > 0 ? local : initialTenants);
     });
   } catch (err) {
     console.warn('Tenants subscription error:', err);
-    callback(initialTenants);
+    const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    callback(local.length > 0 ? local : initialTenants);
     return () => {};
   }
 }
 
-// Subscribe to Payments collection
+// Subscribe to Payments collection with Fail-Safe Persistence
 export function subscribePayments(callback: (payments: PaymentLog[]) => void) {
   try {
     const colRef = collection(db, PAYMENTS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
-        callback(initialPayments);
+        const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+        callback(local.length > 0 ? local : initialPayments);
       } else {
         const payments: PaymentLog[] = snapshot.docs.map((doc) => doc.data() as PaymentLog);
+        localStorage.setItem('gmr_payments', JSON.stringify(payments));
         callback(payments);
       }
     }, (error) => {
       console.warn('Payments snapshot notice:', error?.message || error);
-      callback(initialPayments);
+      const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+      callback(local.length > 0 ? local : initialPayments);
     });
   } catch (err) {
     console.warn('Payments subscription error:', err);
-    callback(initialPayments);
+    const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+    callback(local.length > 0 ? local : initialPayments);
     return () => {};
   }
 }
@@ -154,46 +99,119 @@ export function subscribeSecondAdmins(callback: (admins: SecondAdmin[]) => void)
     const colRef = collection(db, SECOND_ADMINS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
       const admins: SecondAdmin[] = snapshot.docs.map((doc) => doc.data() as SecondAdmin);
+      localStorage.setItem('gmr_second_admins', JSON.stringify(admins));
       callback(admins);
     }, (error) => {
       console.warn('SecondAdmins snapshot notice:', error?.message || error);
-      callback([]);
+      const local = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+      callback(local);
     });
   } catch (err) {
     console.warn('SecondAdmins subscription error:', err);
-    callback([]);
+    const local = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    callback(local);
     return () => {};
   }
 }
 
 // Property CRUD
 export async function savePropertyInDb(property: Property) {
-  await setDoc(doc(db, PROPERTIES_COLLECTION, property.id), property, { merge: true });
+  try {
+    const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+    const updated = [...local.filter(p => p.id !== property.id), property];
+    localStorage.setItem('gmr_properties', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await setDoc(doc(db, PROPERTIES_COLLECTION, property.id), property, { merge: true });
+  } catch (err) {
+    console.warn('Firestore Property save notice:', err);
+  }
 }
 
 // Tenant CRUD
 export async function saveTenantInDb(tenant: Tenant) {
-  await setDoc(doc(db, TENANTS_COLLECTION, tenant.id), tenant, { merge: true });
+  try {
+    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const updated = [...local.filter(t => t.id !== tenant.id), tenant];
+    localStorage.setItem('gmr_tenants', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await setDoc(doc(db, TENANTS_COLLECTION, tenant.id), tenant, { merge: true });
+  } catch (err) {
+    console.warn('Firestore Tenant save notice:', err);
+  }
 }
 
 export async function updateTenantInDb(tenantId: string, updates: Partial<Tenant>) {
-  await updateDoc(doc(db, TENANTS_COLLECTION, tenantId), updates);
+  try {
+    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const updated = local.map(t => t.id === tenantId ? { ...t, ...updates } : t);
+    localStorage.setItem('gmr_tenants', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await updateDoc(doc(db, TENANTS_COLLECTION, tenantId), updates);
+  } catch (err) {
+    console.warn('Firestore Tenant update notice:', err);
+  }
 }
 
 export async function deleteTenantInDb(tenantId: string) {
-  await deleteDoc(doc(db, TENANTS_COLLECTION, tenantId));
+  try {
+    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const updated = local.filter(t => t.id !== tenantId);
+    localStorage.setItem('gmr_tenants', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await deleteDoc(doc(db, TENANTS_COLLECTION, tenantId));
+  } catch (err) {
+    console.warn('Firestore Tenant delete notice:', err);
+  }
 }
 
 // Payment CRUD
 export async function savePaymentInDb(payment: PaymentLog) {
-  await setDoc(doc(db, PAYMENTS_COLLECTION, payment.id), payment, { merge: true });
+  try {
+    const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+    const updated = [...local.filter(p => p.id !== payment.id), payment];
+    localStorage.setItem('gmr_payments', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await setDoc(doc(db, PAYMENTS_COLLECTION, payment.id), payment, { merge: true });
+  } catch (err) {
+    console.warn('Firestore Payment save notice:', err);
+  }
 }
 
 // Second Admin CRUD
 export async function saveSecondAdminInDb(admin: SecondAdmin) {
-  await setDoc(doc(db, SECOND_ADMINS_COLLECTION, admin.id), admin, { merge: true });
+  try {
+    const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const updated = [...local.filter(a => a.id !== admin.id), admin];
+    localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await setDoc(doc(db, SECOND_ADMINS_COLLECTION, admin.id), admin, { merge: true });
+  } catch (err) {
+    console.warn('Firestore Second Admin save notice:', err);
+  }
 }
 
 export async function deleteSecondAdminInDb(adminId: string) {
-  await deleteDoc(doc(db, SECOND_ADMINS_COLLECTION, adminId));
+  try {
+    const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const updated = local.filter(a => a.id !== adminId);
+    localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await deleteDoc(doc(db, SECOND_ADMINS_COLLECTION, adminId));
+  } catch (err) {
+    console.warn('Firestore Second Admin delete notice:', err);
+  }
 }

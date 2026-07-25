@@ -129,9 +129,6 @@ export default function App() {
 
   // Subscribe to Cloud Firestore database on mount
   useEffect(() => {
-    // Purge dummy data so only main branch property remains
-    purgeAllDummyData();
-
     const unsubProp = subscribeProperties((data) => setProperties(data));
     const unsubTenant = subscribeTenants((data) => setTenants(data));
     const unsubPay = subscribePayments((data) => setPayments(data));
