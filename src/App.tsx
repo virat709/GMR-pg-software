@@ -157,6 +157,7 @@ export default function App() {
       ...newPropData,
       id: 'prop_' + Math.random().toString(36).substring(2, 9),
     };
+    setProperties(prev => [...prev.filter(p => p.id !== newProperty.id), newProperty]);
     await savePropertyInDb(newProperty);
     showToast(`Registered PG Branch "${newProperty.name}" in Database!`, 'success');
   };
@@ -167,11 +168,13 @@ export default function App() {
       ...newTenantData,
       id: 'tenant_' + Math.random().toString(36).substring(2, 9),
     };
+    setTenants(prev => [...prev.filter(t => t.id !== newTenant.id), newTenant]);
     await saveTenantInDb(newTenant);
     showToast(`Resident ${newTenant.name} registered in Database!`, 'success');
   };
 
   const handleEditTenant = async (updatedTenant: Tenant) => {
+    setTenants(prev => prev.map(t => t.id === updatedTenant.id ? updatedTenant : t));
     await saveTenantInDb(updatedTenant);
     showToast(`Resident ${updatedTenant.name}'s profile updated in Database!`, 'success');
   };
@@ -179,6 +182,7 @@ export default function App() {
   const handleCheckOutTenant = async (tenantId: string) => {
     const tenantName = tenants.find(t => t.id === tenantId)?.name || 'Resident';
     const checkOutDate = new Date().toISOString().split('T')[0];
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: 'CheckedOut', checkOutDate } : t));
     await updateTenantInDb(tenantId, { status: 'CheckedOut', checkOutDate });
     showToast(`Resident ${tenantName} checked out! Database updated.`, 'info');
   };
@@ -189,6 +193,7 @@ export default function App() {
       ...newPaymentData,
       id: 'pay_' + Math.random().toString(36).substring(2, 9),
     };
+    setPayments(prev => [...prev.filter(p => p.id !== newPayment.id), newPayment]);
     await savePaymentInDb(newPayment);
     
     // Get tenant name for toast
