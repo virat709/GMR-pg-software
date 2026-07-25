@@ -180,10 +180,28 @@ export default function App() {
 
   const handleDeleteProperty = async (propertyId: string) => {
     const propName = properties.find(p => p.id === propertyId)?.name || 'Branch';
+
+    // 1. Delete property
     setProperties(prev => prev.filter(p => p.id !== propertyId));
     await deletePropertyInDb(propertyId);
+
+    // 2. Cascade delete all tenants belonging to this property
+    const tenantsToDelete = tenants.filter(t => t.propertyId === propertyId);
+    const tenantIdsToDelete = new Set(tenantsToDelete.map(t => t.id));
+    const paymentsToDelete = payments.filter(p => tenantIdsToDelete.has(p.tenantId));
+
+    if (tenantsToDelete.length > 0) {
+      setTenants(prev => prev.filter(t => t.propertyId !== propertyId));
+      tenantsToDelete.forEach(t => deleteTenantInDb(t.id));
+    }
+
+    if (paymentsToDelete.length > 0) {
+      setPayments(prev => prev.filter(p => !tenantIdsToDelete.has(p.tenantId)));
+      paymentsToDelete.forEach(p => deletePaymentInDb(p.id));
+    }
+
     if (selectedPropertyId === propertyId) setSelectedPropertyId('all');
-    showToast(`Deleted PG Branch "${propName}" from Database.`, 'info');
+    showToast(`Deleted PG Branch "${propName}" and all associated resident data from Database.`, 'info');
   };
 
   // Tenant Handlers

@@ -93,9 +93,10 @@ export default function DashboardOverview({
   // Currently selected property object (null if 'all')
   const activeProperty = properties.find(p => p.id === selectedPropertyId) || null;
 
-  // Filter tenants by selected property
+  // Filter tenants by selected property and valid properties
+  const validPropertyIds = new Set(properties.map(p => p.id));
   const filteredTenants = selectedPropertyId === 'all' 
-    ? tenants 
+    ? tenants.filter(t => properties.length === 0 || validPropertyIds.has(t.propertyId))
     : tenants.filter(t => t.propertyId === selectedPropertyId);
 
   // Filtered active tenants

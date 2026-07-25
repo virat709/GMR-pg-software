@@ -32,26 +32,33 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
   try {
     const colRef = collection(db, PROPERTIES_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
-        const dataToUse = local.length > 0 ? local : initialProperties;
-        callback(dataToUse);
-        // Auto-seed to Firestore if completely empty
-        dataToUse.forEach((p: Property) => savePropertyInDb(p));
+      const initialized = localStorage.getItem('gmr_properties_initialized');
+      if (snapshot.empty && !initialized) {
+        localStorage.setItem('gmr_properties_initialized', 'true');
+        localStorage.setItem('gmr_properties', JSON.stringify(initialProperties));
+        callback(initialProperties);
+        initialProperties.forEach((p: Property) => savePropertyInDb(p));
+      } else if (snapshot.empty) {
+        localStorage.setItem('gmr_properties_initialized', 'true');
+        localStorage.setItem('gmr_properties', '[]');
+        callback([]);
       } else {
+        localStorage.setItem('gmr_properties_initialized', 'true');
         const properties: Property[] = snapshot.docs.map((doc) => doc.data() as Property);
         localStorage.setItem('gmr_properties', JSON.stringify(properties));
         callback(properties);
       }
     }, (error) => {
       console.warn('Properties snapshot notice:', error?.message || error);
-      const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
-      callback(local.length > 0 ? local : initialProperties);
+      const localStr = localStorage.getItem('gmr_properties');
+      const local = localStr !== null ? JSON.parse(localStr) : initialProperties;
+      callback(local);
     });
   } catch (err) {
     console.warn('Properties subscription error:', err);
-    const local = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
-    callback(local.length > 0 ? local : initialProperties);
+    const localStr = localStorage.getItem('gmr_properties');
+    const local = localStr !== null ? JSON.parse(localStr) : initialProperties;
+    callback(local);
     return () => {};
   }
 }
@@ -61,23 +68,32 @@ export function subscribeTenants(callback: (tenants: Tenant[]) => void) {
   try {
     const colRef = collection(db, TENANTS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
-        callback(local.length > 0 ? local : initialTenants);
+      const initialized = localStorage.getItem('gmr_tenants_initialized');
+      if (snapshot.empty && !initialized) {
+        localStorage.setItem('gmr_tenants_initialized', 'true');
+        localStorage.setItem('gmr_tenants', JSON.stringify(initialTenants));
+        callback(initialTenants);
+      } else if (snapshot.empty) {
+        localStorage.setItem('gmr_tenants_initialized', 'true');
+        localStorage.setItem('gmr_tenants', '[]');
+        callback([]);
       } else {
+        localStorage.setItem('gmr_tenants_initialized', 'true');
         const tenants: Tenant[] = snapshot.docs.map((doc) => doc.data() as Tenant);
         localStorage.setItem('gmr_tenants', JSON.stringify(tenants));
         callback(tenants);
       }
     }, (error) => {
       console.warn('Tenants snapshot notice:', error?.message || error);
-      const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
-      callback(local.length > 0 ? local : initialTenants);
+      const localStr = localStorage.getItem('gmr_tenants');
+      const local = localStr !== null ? JSON.parse(localStr) : initialTenants;
+      callback(local);
     });
   } catch (err) {
     console.warn('Tenants subscription error:', err);
-    const local = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
-    callback(local.length > 0 ? local : initialTenants);
+    const localStr = localStorage.getItem('gmr_tenants');
+    const local = localStr !== null ? JSON.parse(localStr) : initialTenants;
+    callback(local);
     return () => {};
   }
 }
@@ -87,23 +103,32 @@ export function subscribePayments(callback: (payments: PaymentLog[]) => void) {
   try {
     const colRef = collection(db, PAYMENTS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
-        callback(local.length > 0 ? local : initialPayments);
+      const initialized = localStorage.getItem('gmr_payments_initialized');
+      if (snapshot.empty && !initialized) {
+        localStorage.setItem('gmr_payments_initialized', 'true');
+        localStorage.setItem('gmr_payments', JSON.stringify(initialPayments));
+        callback(initialPayments);
+      } else if (snapshot.empty) {
+        localStorage.setItem('gmr_payments_initialized', 'true');
+        localStorage.setItem('gmr_payments', '[]');
+        callback([]);
       } else {
+        localStorage.setItem('gmr_payments_initialized', 'true');
         const payments: PaymentLog[] = snapshot.docs.map((doc) => doc.data() as PaymentLog);
         localStorage.setItem('gmr_payments', JSON.stringify(payments));
         callback(payments);
       }
     }, (error) => {
       console.warn('Payments snapshot notice:', error?.message || error);
-      const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
-      callback(local.length > 0 ? local : initialPayments);
+      const localStr = localStorage.getItem('gmr_payments');
+      const local = localStr !== null ? JSON.parse(localStr) : initialPayments;
+      callback(local);
     });
   } catch (err) {
     console.warn('Payments subscription error:', err);
-    const local = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
-    callback(local.length > 0 ? local : initialPayments);
+    const localStr = localStorage.getItem('gmr_payments');
+    const local = localStr !== null ? JSON.parse(localStr) : initialPayments;
+    callback(local);
     return () => {};
   }
 }

@@ -314,7 +314,8 @@ export default function BillingManager({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(now.getDate() - 30);
 
-  const scopeTenants = tenants.filter(t => t.status === 'Active' && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId));
+  const validPropertyIds = new Set(properties.map(p => p.id));
+  const scopeTenants = tenants.filter(t => t.status === 'Active' && (properties.length === 0 || validPropertyIds.has(t.propertyId)) && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId));
   const scopeTenantIds = new Set(scopeTenants.map(t => t.id));
 
   const totalExpectedAmount = scopeTenants.reduce((sum, t) => sum + t.rentAmount, 0);

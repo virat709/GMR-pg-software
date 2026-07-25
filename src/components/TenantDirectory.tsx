@@ -251,7 +251,11 @@ export default function TenantDirectory({
   };
 
   // Filter tenants
+  const validPropertyIds = new Set(properties.map(p => p.id));
   const filteredTenants = tenants.filter(t => {
+    if (properties.length > 0 && !validPropertyIds.has(t.propertyId)) {
+      return false;
+    }
     const matchesProperty = !selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId;
     const name = t.name || '';
     const room = t.roomNumber || '';
