@@ -33,6 +33,7 @@ import {
   subscribePayments,
   subscribeSecondAdmins,
   savePropertyInDb,
+  deletePropertyInDb,
   saveTenantInDb,
   updateTenantInDb,
   savePaymentInDb,
@@ -167,6 +168,20 @@ export default function App() {
     setProperties(prev => [...prev.filter(p => p.id !== newProperty.id), newProperty]);
     await savePropertyInDb(newProperty);
     showToast(`Registered PG Branch "${newProperty.name}" in Database!`, 'success');
+  };
+
+  const handleEditProperty = async (updatedProperty: Property) => {
+    setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
+    await savePropertyInDb(updatedProperty);
+    showToast(`Updated PG Branch "${updatedProperty.name}" in Database!`, 'success');
+  };
+
+  const handleDeleteProperty = async (propertyId: string) => {
+    const propName = properties.find(p => p.id === propertyId)?.name || 'Branch';
+    setProperties(prev => prev.filter(p => p.id !== propertyId));
+    await deletePropertyInDb(propertyId);
+    if (selectedPropertyId === propertyId) setSelectedPropertyId('all');
+    showToast(`Deleted PG Branch "${propName}" from Database.`, 'info');
   };
 
   // Tenant Handlers
@@ -605,6 +620,8 @@ export default function App() {
                 selectedPropertyId={selectedPropertyId}
                 onSelectProperty={setSelectedPropertyId}
                 onAddProperty={handleAddProperty}
+                onEditProperty={handleEditProperty}
+                onDeleteProperty={handleDeleteProperty}
                 tenants={tenants}
                 payments={payments}
                 billingAlerts={billingAlerts}

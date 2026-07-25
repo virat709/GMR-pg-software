@@ -146,6 +146,21 @@ export async function savePropertyInDb(property: Property) {
   }
 }
 
+export async function deletePropertyInDb(propertyId: string) {
+  try {
+    const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+    const updated = local.filter(p => p.id !== propertyId);
+    localStorage.setItem('gmr_properties', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await deleteDoc(doc(db, PROPERTIES_COLLECTION, propertyId));
+    console.log('Deleted Property from Cloud Firestore:', propertyId);
+  } catch (err) {
+    console.error('Firestore Property delete error:', err);
+  }
+}
+
 // Tenant CRUD
 export async function saveTenantInDb(tenant: Tenant) {
   try {

@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   UserCheck,
   FileText,
-  Download
+  Download,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Tenant, PaymentLog, BillingAlert, Property, PropertyType, UserRole } from '../types';
 import { triggerWhatsAppMessage, getRentReminderTemplate } from '../utils/whatsapp';
@@ -35,6 +37,8 @@ interface DashboardOverviewProps {
   selectedPropertyId: string;
   onSelectProperty: (propertyId: string) => void;
   onAddProperty: (newProperty: Omit<Property, 'id'>) => void;
+  onEditProperty?: (property: Property) => void;
+  onDeleteProperty?: (propertyId: string) => void;
   tenants: Tenant[];
   payments: PaymentLog[];
   billingAlerts: BillingAlert[];
@@ -50,6 +54,8 @@ export default function DashboardOverview({
   selectedPropertyId,
   onSelectProperty,
   onAddProperty,
+  onEditProperty,
+  onDeleteProperty,
   tenants,
   payments,
   billingAlerts,
@@ -69,6 +75,18 @@ export default function DashboardOverview({
   const [propTotalFloors, setPropTotalFloors] = useState<number | string>('');
   const [propContact, setPropContact] = useState('');
   const [propType, setPropType] = useState<PropertyType>('Co-Living');
+
+  // Modal for editing an existing property branch
+  const [isEditPropertyOpen, setIsEditPropertyOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [editPropName, setEditPropName] = useState('');
+  const [editPropCode, setEditPropCode] = useState('');
+  const [editPropAddress, setEditPropAddress] = useState('');
+  const [editPropCity, setEditPropCity] = useState('');
+  const [editPropTotalRooms, setEditPropTotalRooms] = useState<number | string>('');
+  const [editPropTotalFloors, setEditPropTotalFloors] = useState<number | string>('');
+  const [editPropContact, setEditPropContact] = useState('');
+  const [editPropType, setEditPropType] = useState<PropertyType>('Co-Living');
 
   // Currently selected property object (null if 'all')
   const activeProperty = properties.find(p => p.id === selectedPropertyId) || null;
@@ -185,6 +203,53 @@ export default function DashboardOverview({
     setPropContact('');
     setPropType('Co-Living');
     setIsAddPropertyOpen(false);
+  };
+
+  // ── Edit Property Handlers ──────────────────────────────────────────────────
+  const handleOpenEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setEditPropName(property.name);
+    setEditPropCode(property.code);
+    setEditPropAddress(property.address);
+    setEditPropCity(property.city);
+    setEditPropTotalRooms(property.totalRooms);
+    setEditPropTotalFloors(property.totalFloors);
+    setEditPropContact(property.contactNumber);
+    setEditPropType(property.type);
+    setIsEditPropertyOpen(true);
+  };
+
+  const handleEditPropertySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+    if (!editPropName.trim() || !editPropAddress.trim() || !editPropCity.trim() || !editPropContact.trim()) {
+      alert('Please fill in all required fields (Name, City, Address, Contact Number).');
+      return;
+    }
+    const updated: Property = {
+      ...editingProperty,
+      name: editPropName.trim(),
+      code: editPropCode.trim().toUpperCase() || editPropName.trim().substring(0, 4).toUpperCase(),
+      address: editPropAddress.trim(),
+      city: editPropCity.trim(),
+      totalRooms: Number(editPropTotalRooms) || editingProperty.totalRooms,
+      totalFloors: Number(editPropTotalFloors) || editingProperty.totalFloors,
+      contactNumber: editPropContact.trim(),
+      type: editPropType,
+    };
+    onEditProperty?.(updated);
+    setIsEditPropertyOpen(false);
+    setEditingProperty(null);
+  };
+
+  const handleDeleteProperty = (property: Property) => {
+    const tenantCount = tenants.filter(t => t.propertyId === property.id && t.status === 'Active').length;
+    const confirmMsg = tenantCount > 0
+      ? `⚠️ "${property.name}" has ${tenantCount} active resident(s).\n\nDeleting this branch will NOT remove the residents but they will be unlinked.\n\nAre you sure you want to permanently delete this branch?`
+      : `Delete "${property.name}" permanently? This cannot be undone.`;
+    if (window.confirm(confirmMsg)) {
+      onDeleteProperty?.(property.id);
+    }
   };
 
   return (
@@ -435,6 +500,34 @@ export default function DashboardOverview({
                         {property.name}
                       </h3>
                     </div>
+
+                    {/* Edit & Delete buttons — Super Admin only */}
+                    {userRole === 'super_admin' && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleOpenEditProperty(property); }}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            isSelected 
+                              ? 'hover:bg-neutral-700 text-neutral-300 hover:text-white' 
+                              : 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700'
+                          }`}
+                          title="Edit Property Details"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteProperty(property); }}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            isSelected 
+                              ? 'hover:bg-red-900/50 text-neutral-400 hover:text-red-300' 
+                              : 'hover:bg-red-50 text-neutral-300 hover:text-red-500'
+                          }`}
+                          title="Delete Property Branch"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <p className={`text-xs flex items-center gap-1 leading-snug ${isSelected ? 'text-neutral-400' : 'text-neutral-500'}`}>
@@ -805,6 +898,172 @@ export default function DashboardOverview({
         selectedPropertyId={selectedPropertyId}
         showToast={showToast}
       />
+
+      {/* ── EDIT PROPERTY BRANCH MODAL ───────────────────────────────────── */}
+      {isEditPropertyOpen && editingProperty && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl border border-neutral-200 shadow-xl w-full max-w-lg overflow-hidden flex flex-col"
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit className="w-5 h-5 text-emerald-700" />
+                <div>
+                  <h3 className="font-extrabold text-neutral-900 text-base">Edit Property Branch</h3>
+                  <p className="text-[11px] text-emerald-700 font-semibold">{editingProperty.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsEditPropertyOpen(false); setEditingProperty(null); }}
+                className="p-1 hover:bg-emerald-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditPropertySubmit} className="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+              {/* Row 1: Name & Code */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Property Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. GMR Prime Heights"
+                    value={editPropName}
+                    onChange={(e) => setEditPropName(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm font-semibold bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Branch Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. PRIME"
+                    value={editPropCode}
+                    onChange={(e) => setEditPropCode(e.target.value.toUpperCase())}
+                    className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm font-mono tracking-wider bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Type & City */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Property Type *</label>
+                  <select
+                    value={editPropType}
+                    onChange={(e) => setEditPropType(e.target.value as PropertyType)}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Co-Living">Co-Living</option>
+                    <option value="Boys PG">Boys PG</option>
+                    <option value="Girls PG">Girls PG</option>
+                    <option value="Luxury Apartments">Luxury Apartments</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">City *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Hyderabad"
+                    value={editPropCity}
+                    onChange={(e) => setEditPropCity(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Full Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Full Street Address *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Plot 42, Road No 12, Banjara Hills"
+                  value={editPropAddress}
+                  onChange={(e) => setEditPropAddress(e.target.value)}
+                  className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Row 3: Rooms, Floors, Phone */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Total Rooms *</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="1"
+                    value={editPropTotalRooms}
+                    onChange={(e) => setEditPropTotalRooms(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm font-bold bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Floors *</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="1"
+                    value={editPropTotalFloors}
+                    onChange={(e) => setEditPropTotalFloors(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm font-bold bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Manager Phone *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="+91 98765 43210"
+                    value={editPropContact}
+                    onChange={(e) => setEditPropContact(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Info banner */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-medium">
+                ⚠️ Changing <b>Total Rooms</b> will update occupancy rate calculations across this branch. Changes are saved to cloud immediately.
+              </div>
+
+              {/* Action Buttons */}
+              <div className="border-t border-neutral-100 pt-4 flex items-center justify-between gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProperty(editingProperty)}
+                  className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Branch
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setIsEditPropertyOpen(false); setEditingProperty(null); }}
+                    className="px-4 py-2 border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );
