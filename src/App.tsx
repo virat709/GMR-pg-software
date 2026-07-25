@@ -289,26 +289,13 @@ export default function App() {
       {/* LEFT SIDEBAR: Desktop Layout (Hidden on printing) */}
       <aside className="hidden md:flex flex-col w-64 h-full overflow-y-auto bg-neutral-900 text-neutral-300 border-r border-neutral-800 shrink-0 select-none print:hidden" id="desktop-sidebar">
         {/* Branding header */}
-        <div className="p-6 border-b border-neutral-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm p-1 shrink-0">
-            <svg viewBox="0 0 100 100" className="w-8 h-8 text-[#16a34a]" fill="currentColor">
-              <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" fill="currentColor" />
-              <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" fill="currentColor" />
-              <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" fill="currentColor" />
-              <path d="M50,25 C34,35 32,50 40,62 C45,52 47,40 50,25 Z" fill="currentColor" />
-              <path d="M50,25 C66,35 68,50 60,62 C55,52 53,40 50,25 Z" fill="currentColor" />
-              <path d="M50,33 C26,42 25,58 35,66 C40,58 44,48 50,33 Z" fill="currentColor" />
-              <path d="M50,33 C74,42 75,58 65,66 C60,58 56,48 50,33 Z" fill="currentColor" />
-              <path d="M22,70 C40,55 60,80 78,65 C60,74 40,60 22,70 Z" fill="currentColor" />
-              <path d="M18,78 C38,62 62,88 82,72 C62,81 38,67 18,78 Z" fill="currentColor" />
-            </svg>
+        <div className="p-5 border-b border-neutral-800 flex items-center gap-3 bg-neutral-950/40">
+          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1 shrink-0 shadow-md border border-emerald-600/30">
+            <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-extrabold text-white text-sm tracking-wide">GMR</h1>
-              <span className="bg-[#e6df15] text-neutral-950 font-black text-[9px] px-1.5 py-0.5 rounded-sm select-none">PG</span>
-            </div>
-            <p className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase">Multi-Property System</p>
+            <h1 className="font-extrabold text-white text-sm tracking-wide">GMR Co-Living</h1>
+            <p className="text-[10px] text-emerald-400 font-bold tracking-wider italic">Feels like home</p>
           </div>
         </div>
 
@@ -441,23 +428,13 @@ export default function App() {
 
       {/* MOBILE HEADER & DRAWER (Hidden on printing) */}
       <header className="md:hidden bg-neutral-900 text-neutral-300 border-b border-neutral-800 px-4 py-3.5 flex items-center justify-between z-40 print:hidden select-none" id="mobile-header">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-0.5">
-            <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#16a34a]" fill="currentColor">
-              <path d="M50,15 C47,30 47,45 50,60 C53,45 53,30 50,15 Z" />
-              <path d="M50,20 C42,32 40,46 45,58 C49,48 49,34 50,20 Z" />
-              <path d="M50,20 C58,32 60,46 55,58 C51,48 51,34 50,20 Z" />
-              <path d="M50,25 C34,35 32,50 40,62 C45,52 47,40 50,25 Z" />
-              <path d="M50,25 C66,35 68,50 60,62 C55,52 53,40 50,25 Z" />
-              <path d="M50,33 C26,42 25,58 35,66 C40,58 44,48 50,33 Z" />
-              <path d="M50,33 C74,42 75,58 65,66 C60,58 56,48 50,33 Z" />
-              <path d="M22,70 C40,55 60,80 78,65 C60,74 40,60 22,70 Z" />
-              <path d="M18,78 C38,62 62,88 82,72 C62,81 38,67 18,78 Z" />
-            </svg>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-0.5 shrink-0 shadow-sm border border-emerald-600/30">
+            <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-white text-sm tracking-wide">GMR</span>
-            <span className="bg-[#e6df15] text-neutral-950 font-black text-[9px] px-1 py-0.5 rounded-sm">PG</span>
+          <div>
+            <span className="font-extrabold text-white text-sm tracking-wide block leading-none">GMR Co-Living</span>
+            <span className="text-[9px] text-emerald-400 font-bold tracking-wider italic">Feels like home</span>
           </div>
         </div>
 
