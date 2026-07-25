@@ -213,8 +213,8 @@ export default function TenantDirectory({
         officeAddress,
         permanentAddress,
         familyContactNumber,
-        aadharNo,
-        panNo,
+        aadharNo: idType === 'Aadhaar' ? idNumber : (aadharNo || ''),
+        panNo: idType === 'PAN' ? idNumber : (panNo || ''),
       });
     } else {
       onAddTenant({
@@ -239,8 +239,8 @@ export default function TenantDirectory({
         officeAddress,
         permanentAddress,
         familyContactNumber,
-        aadharNo,
-        panNo,
+        aadharNo: idType === 'Aadhaar' ? idNumber : (aadharNo || ''),
+        panNo: idType === 'PAN' ? idNumber : (panNo || ''),
       });
     }
     setIsModalOpen(false);
@@ -932,7 +932,7 @@ export default function TenantDirectory({
                       <select
                         value={idType}
                         onChange={(e) => setIdType(e.target.value as IDType)}
-                        className="px-3 py-2 border border-neutral-200 rounded-xl text-xs bg-neutral-50/50 select-none shrink-0"
+                        className="px-3 py-2 border border-neutral-200 rounded-xl text-xs bg-neutral-50/50 select-none shrink-0 font-semibold"
                       >
                         <option value="Aadhaar">Aadhaar</option>
                         <option value="PAN">PAN Card</option>
@@ -951,42 +951,16 @@ export default function TenantDirectory({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Aadhaar No *</label>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="12 digit Aadhaar"
-                        value={aadharNo}
-                        onChange={(e) => setAadharNo(e.target.value)}
-                        className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">PAN No *</label>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="10 digit PAN"
-                        value={panNo}
-                        onChange={(e) => setPanNo(e.target.value)}
-                        className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-xs font-mono uppercase bg-neutral-50/50"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Check-In / Joining Date *</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={checkInDate}
+                      onChange={(e) => setCheckInDate(e.target.value)}
+                      className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 font-mono"
+                    />
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Check-In / Joining Date *</label>
-                  <input 
-                    type="date" 
-                    required
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 font-mono"
-                  />
                 </div>
               </div>
 
