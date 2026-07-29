@@ -23,7 +23,7 @@ import {
   UserCheck,
   ShieldAlert
 } from 'lucide-react';
-import { Tenant, PaymentLog, BillingAlert, Property, UserRole, SecondAdmin } from './types';
+import { Tenant, PaymentLog, BillingAlert, Property, UserRole, SecondAdmin, PendingTenantRegistration } from './types';
 import { initialTenants, initialPayments, initialProperties } from './mockData';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
@@ -32,6 +32,7 @@ import {
   subscribeTenants,
   subscribePayments,
   subscribeSecondAdmins,
+  subscribePendingRegistrations,
   savePropertyInDb,
   deletePropertyInDb,
   saveTenantInDb,
@@ -39,6 +40,8 @@ import {
   deleteTenantInDb,
   savePaymentInDb,
   deletePaymentInDb,
+  savePendingRegistrationInDb,
+  deletePendingRegistrationInDb,
   testFirestoreConnection
 } from './lib/firestoreService';
 
@@ -48,8 +51,12 @@ import TenantDirectory from './components/TenantDirectory';
 import BillingManager from './components/BillingManager';
 import PinLockModal from './components/PinLockModal';
 import LogoSplashScreen from './components/LogoSplashScreen';
+import TenantSelfRegistrationForm from './components/TenantSelfRegistrationForm';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import LanguageToggle from './components/LanguageToggle';
 
-export default function App() {
+function MainContent() {
+  const { t } = useLanguage();
   // Opening Logo Splash Screen State
   const [showSplashScreen, setShowSplashScreen] = useState<boolean>(true);
 
@@ -99,12 +106,19 @@ export default function App() {
   // Mobile sidebar state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Detect Public QR Code Self-Registration Form URL (?register=true or #register)
+  const [isPublicRegisterMode, setIsPublicRegisterMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.search.includes('register=true') || window.location.hash.includes('register');
+  });
+
   // Core Data States
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
   const [secondAdmins, setSecondAdmins] = useState<SecondAdmin[]>([]);
+  const [pendingRegistrations, setPendingRegistrations] = useState<PendingTenantRegistration[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   // Notification Toast state
@@ -143,12 +157,14 @@ export default function App() {
     const unsubTenant = subscribeTenants((data) => setTenants(data));
     const unsubPay = subscribePayments((data) => setPayments(data));
     const unsubAdmin = subscribeSecondAdmins((data) => setSecondAdmins(data));
+    const unsubPending = subscribePendingRegistrations((data) => setPendingRegistrations(data));
 
     return () => {
       unsubProp();
       unsubTenant();
       unsubPay();
       unsubAdmin();
+      unsubPending();
     };
   }, []);
 
@@ -238,6 +254,50 @@ export default function App() {
     showToast(`Resident ${tenantName} checked out! Database updated.`, 'info');
   };
 
+  // Pending Self-Registration Handlers
+  const handleApprovePendingRegistration = async (reg: PendingTenantRegistration) => {
+    const newTenant: Tenant = {
+      id: 'tenant_' + Math.random().toString(36).substring(2, 9),
+      propertyId: reg.propertyId,
+      name: reg.name,
+      phone: reg.phone,
+      email: reg.email,
+      roomNumber: reg.roomNumber,
+      rentAmount: reg.rentAmount,
+      securityDeposit: reg.securityDeposit,
+      presentPaid: reg.presentPaid,
+      idType: reg.idType,
+      idNumber: reg.idNumber,
+      checkInDate: reg.checkInDate || new Date().toISOString().split('T')[0],
+      checkOutDate: null,
+      status: 'Active',
+      fatherName: reg.fatherName,
+      age: reg.age,
+      dob: reg.dob,
+      educationalQualification: reg.educationalQualification,
+      employment: reg.employment,
+      officeAddress: reg.officeAddress,
+      permanentAddress: reg.permanentAddress,
+      familyContactNumber: reg.familyContactNumber,
+      aadharNo: reg.aadharNo,
+      panNo: reg.panNo
+    };
+
+    setTenants(prev => [...prev.filter(t => t.id !== newTenant.id), newTenant]);
+    setPendingRegistrations(prev => prev.filter(r => r.id !== reg.id));
+
+    await saveTenantInDb(newTenant);
+    await deletePendingRegistrationInDb(reg.id);
+
+    showToast(`Approved & Registered ${newTenant.name} into Room ${newTenant.roomNumber}!`, 'success');
+  };
+
+  const handleRejectPendingRegistration = async (regId: string, regName: string) => {
+    setPendingRegistrations(prev => prev.filter(r => r.id !== regId));
+    await deletePendingRegistrationInDb(regId);
+    showToast(`Rejected registration form for ${regName}.`, 'info');
+  };
+
   // Payment Handlers
   const handleAddPayment = async (newPaymentData: Omit<PaymentLog, 'id'>) => {
     const newPayment: PaymentLog = {
@@ -265,13 +325,17 @@ export default function App() {
     showToast(`Sent monthly billing alert push notification to ${alert.tenantName}'s device successfully!`, 'success');
   };
 
-  // Dynamically calculate Billing Alerts based on active tenants for July 2026 ('2026-07')
-  const currentMonth = '2026-07';
+  // Dynamically calculate Billing Alerts based on active tenants for the current month
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthNum = String(now.getMonth() + 1).padStart(2, '0');
+  const currentMonth = `${currentYear}-${currentMonthNum}`;
+  const dueDate = `${currentMonth}-05`;
+
   const billingAlerts: BillingAlert[] = tenants
     .filter(t => t.status === 'Active')
     .map(tenant => {
       const hasPaid = payments.some(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
-      const dueDate = '2026-07-05';
       const status = hasPaid ? 'Paid' : 'Overdue';
       
       return {
@@ -288,15 +352,24 @@ export default function App() {
 
   // Sidebar navigation options
   const navItems = [
-    { id: 'dashboard' as const, label: 'Properties Overview', icon: LayoutDashboard },
-    { id: 'tenants' as const, label: 'Residents Directory', icon: Users },
-    { id: 'billing' as const, label: 'Billing & Receipts', icon: IndianRupee },
+    { id: 'dashboard' as const, label: t('navDashboard'), icon: LayoutDashboard },
+    { id: 'tenants' as const, label: t('navTenants'), icon: Users },
+    { id: 'billing' as const, label: t('navBilling'), icon: IndianRupee },
   ];
 
   const handleSelectTenantFromDashboard = (tenantId: string) => {
     setSelectedTenantId(tenantId);
     setActiveTab('tenants');
   };
+
+  if (isPublicRegisterMode) {
+    return (
+      <TenantSelfRegistrationForm 
+        properties={properties} 
+        onFinish={() => setIsPublicRegisterMode(false)} 
+      />
+    );
+  }
 
   return (
     <div className={`h-screen w-full font-sans flex flex-col md:flex-row overflow-hidden relative transition-colors duration-300 theme-${theme}`}>
@@ -346,23 +419,23 @@ export default function App() {
             <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-extrabold text-white text-sm tracking-wide">GRM coliving</h1>
-            <p className="text-[14px] text-emerald-300 font-bold tracking-wider font-script">Feels like home</p>
+            <h1 className="font-extrabold text-white text-sm tracking-wide">{t('appName')}</h1>
+            <p className="text-[14px] text-emerald-300 font-bold tracking-wider font-script">{t('tagline')}</p>
           </div>
         </div>
 
         {/* Active Role Access Badge */}
         <div className="px-4 py-2.5 bg-neutral-950/60 border-b border-neutral-800 flex items-center justify-between text-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Access Mode</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{t('accessMode')}</span>
           {userRole === 'super_admin' ? (
             <span className="bg-amber-500/10 border border-amber-500/30 text-amber-300 font-extrabold text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1" title="Super Access: Full system control">
               <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
-              <span>Super Access</span>
+              <span>{t('superAccess')}</span>
             </span>
           ) : (
             <span className="bg-blue-500/10 border border-blue-500/30 text-blue-300 font-extrabold text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1" title="Manager Access: Limited operational mode">
               <UserCheck className="w-3 h-3 text-blue-400 shrink-0" />
-              <span>Limited Manager</span>
+              <span>{t('limitedManager')}</span>
             </span>
           )}
         </div>
@@ -371,14 +444,14 @@ export default function App() {
         <div className="px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/40">
           <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
             <Building2 className="w-3 h-3" />
-            <span>Active Branch</span>
+            <span>{t('activeBranch')}</span>
           </label>
           <select
             value={selectedPropertyId}
             onChange={(e) => setSelectedPropertyId(e.target.value)}
             className="w-full bg-neutral-800 text-white text-xs font-semibold rounded-xl px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-500 cursor-pointer"
           >
-            <option value="all">🏢 All Properties ({properties.length})</option>
+            <option value="all">🏢 {t('allProperties')} ({properties.length})</option>
             {properties.map(p => (
               <option key={p.id} value={p.id}>
                 🏢 {p.name}
@@ -416,8 +489,8 @@ export default function App() {
         {/* Portal Security Section */}
         <div className="px-4 py-3 border-t border-neutral-800 space-y-1.5">
           <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-1">
-            <span>Portal Security</span>
-            <span className="text-emerald-400 font-mono">Encrypted</span>
+            <span>{t('portalSecurity')}</span>
+            <span className="text-emerald-400 font-mono">{t('encrypted')}</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {userRole === 'super_admin' ? (
@@ -427,11 +500,11 @@ export default function App() {
                 title="Manage Second Admins"
               >
                 <UserCheck className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                <span>Second Admins</span>
+                <span>{t('secondAdmins')}</span>
               </button>
             ) : (
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl py-2 px-2.5 text-[10px] text-neutral-500 font-semibold text-center flex items-center justify-center">
-                Manager Access
+                {t('limitedManager')}
               </div>
             )}
             <button
@@ -440,14 +513,20 @@ export default function App() {
               title="Sign Out of Portal"
             >
               <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span>Sign Out</span>
+              <span>{t('signOut')}</span>
             </button>
           </div>
         </div>
 
+        {/* Language Toggle section */}
+        <div className="px-5 py-2.5 border-t border-neutral-800 flex items-center justify-between">
+          <span className="text-[11px] font-bold text-neutral-400 tracking-wider uppercase">{t('language')}</span>
+          <LanguageToggle variant="full" />
+        </div>
+
         {/* Theme Switcher Toggle section */}
         <div className="px-5 py-3 border-t border-neutral-800 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-neutral-400 tracking-wider uppercase">Late-Night Mode</span>
+          <span className="text-[11px] font-bold text-neutral-400 tracking-wider uppercase">{t('lateNightMode')}</span>
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
@@ -460,12 +539,12 @@ export default function App() {
             {theme === 'dark' ? (
               <>
                 <Moon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Dark</span>
+                <span>{t('dark')}</span>
               </>
             ) : (
               <>
                 <Sun className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                <span>Light</span>
+                <span>{t('light')}</span>
               </>
             )}
           </button>
@@ -473,7 +552,7 @@ export default function App() {
 
         {/* Footer info */}
         <div className="p-5 border-t border-neutral-800 text-[10px] text-neutral-500 font-semibold">
-          <p>© 2026 GMR Luxury Co-Living PG</p>
+          <p>© {new Date().getFullYear()} GMR Luxury Co-Living PG</p>
           <p className="text-[9px] mt-0.5">Multi-Property Suite v2.0</p>
         </div>
       </aside>
@@ -491,6 +570,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageToggle variant="compact" />
           <button 
             onClick={handleLock}
             className="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 rounded-xl cursor-pointer transition-all duration-200"
@@ -631,7 +711,7 @@ export default function App() {
               </div>
 
               <div className="text-[10px] text-neutral-500 font-semibold border-t border-neutral-800 pt-4">
-                <p>© 2026 GMR Luxury Co-Living PG</p>
+                <p>© {new Date().getFullYear()} GMR Luxury Co-Living PG</p>
               </div>
             </motion.div>
           </>
@@ -677,13 +757,17 @@ export default function App() {
                 selectedPropertyId={selectedPropertyId}
                 tenants={tenants}
                 payments={payments}
+                pendingRegistrations={pendingRegistrations}
                 onAddTenant={handleAddTenant}
                 onEditTenant={handleEditTenant}
                 onDeleteTenant={handleDeleteTenant}
                 onCheckOutTenant={handleCheckOutTenant}
                 onDeletePayment={handleDeletePayment}
+                onApprovePendingRegistration={handleApprovePendingRegistration}
+                onRejectPendingRegistration={handleRejectPendingRegistration}
                 selectedTenantId={selectedTenantId}
                 onSelectTenant={setSelectedTenantId}
+                showToast={showToast}
               />
             )}
 
@@ -707,5 +791,13 @@ export default function App() {
       </main>
 
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <MainContent />
+    </LanguageProvider>
   );
 }

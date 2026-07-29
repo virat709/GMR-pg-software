@@ -30,6 +30,7 @@ import { Tenant, PaymentLog, BillingAlert, Property, PropertyType, UserRole } fr
 import { triggerWhatsAppMessage, getRentReminderTemplate } from '../utils/whatsapp';
 import { generateRentReminderPDF } from '../utils/reminderPdfGenerator';
 import PartnerStatementModal from './PartnerStatementModal';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DashboardOverviewProps {
   userRole?: UserRole | null;
@@ -66,6 +67,7 @@ export default function DashboardOverview({
   onTriggerAlert,
   showToast = () => {}
 }: DashboardOverviewProps) {
+  const { t } = useLanguage();
   // Modal for adding a new property branch
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
@@ -112,9 +114,10 @@ export default function DashboardOverview({
     ? Math.min(100, Math.round((activeTenants.length / totalRoomsForView) * 100))
     : 0;
 
-  // Current billing month
-  const currentMonth = '2026-07';
-  const currentMonthLabel = 'July 2026';
+  // Current billing month (dynamic based on current date)
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   // Filter payments for filtered tenants
   const filteredTenantIds = new Set(filteredTenants.map(t => t.id));
@@ -286,22 +289,22 @@ export default function DashboardOverview({
         </div>
 
         {/* Property Switcher & Partner PDF Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           <button
             onClick={() => setIsPartnerModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-all hover:shadow-md"
+            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all hover:shadow-md min-h-[40px] whitespace-nowrap"
             title="Generate & Download 30-Day Financial Statement PDF for Partners"
           >
-            <FileText className="w-4 h-4 text-emerald-100" />
+            <FileText className="w-4 h-4 text-emerald-100 shrink-0" />
             <span>Partner 30-Day Statement PDF</span>
           </button>
 
-          <div className="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-xl border border-neutral-200">
+          <div className="flex-1 sm:flex-none flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-xl border border-neutral-200 min-h-[40px]">
             <Filter className="w-3.5 h-3.5 text-neutral-500 ml-1 shrink-0" />
             <select
               value={selectedPropertyId}
               onChange={(e) => onSelectProperty(e.target.value)}
-              className="bg-transparent text-xs font-bold text-neutral-900 border-0 focus:ring-0 cursor-pointer pr-3"
+              className="bg-transparent text-xs font-bold text-neutral-900 border-0 focus:ring-0 cursor-pointer pr-3 w-full"
             >
               <option value="all">🏢 All Properties (Global View)</option>
               {properties.map((prop) => (
@@ -315,9 +318,9 @@ export default function DashboardOverview({
           {userRole === 'super_admin' ? (
             <button
               onClick={() => setIsAddPropertyOpen(true)}
-              className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+              className="flex-1 sm:flex-none bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors min-h-[40px] whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 text-emerald-400" />
+              <Plus className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Add Property</span>
             </button>
           ) : (
@@ -344,9 +347,9 @@ export default function DashboardOverview({
         >
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Capacity & Occupancy</span>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('totalBeds')}</span>
               <p className="text-3xl font-extrabold text-neutral-900">
-                {activeTenants.length} <span className="text-base font-medium text-neutral-400">/ {totalRoomsForView} Rooms</span>
+                {activeTenants.length} <span className="text-base font-medium text-neutral-400">/ {totalRoomsForView} {t('rooms')}</span>
               </p>
             </div>
             <div className="p-3 bg-neutral-100 text-neutral-700 rounded-xl border border-neutral-200/80">
@@ -354,7 +357,7 @@ export default function DashboardOverview({
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between text-xs font-semibold border-t border-neutral-100 pt-3">
-            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{occupancyRate}% Occupied</span>
+            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{occupancyRate}% {t('occupancyRate')}</span>
             <span className="text-neutral-400">{Math.max(0, totalRoomsForView - activeTenants.length)} Vacant</span>
           </div>
         </motion.div>
@@ -369,7 +372,7 @@ export default function DashboardOverview({
         >
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">July Rent Collected</span>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('monthlyCollection')}</span>
               <p className="text-3xl font-extrabold text-neutral-900">₹{collectedThisMonth.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200/80">
@@ -395,7 +398,7 @@ export default function DashboardOverview({
         >
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Unpaid / Due Rent</span>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('pendingDues')}</span>
               <p className="text-3xl font-extrabold text-amber-600">₹{pendingRentAmount.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-amber-50 text-amber-700 rounded-xl border border-amber-200/80">
@@ -425,8 +428,8 @@ export default function DashboardOverview({
         >
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">PG Property Network</span>
-              <p className="text-3xl font-extrabold text-neutral-900">{properties.length} <span className="text-base font-medium text-neutral-400">Branches</span></p>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('totalBranches')}</span>
+              <p className="text-3xl font-extrabold text-neutral-900">{properties.length} <span className="text-base font-medium text-neutral-400">{t('totalBranches')}</span></p>
             </div>
             <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200/80">
               <Building2 className="w-5 h-5 text-emerald-600" />
@@ -454,9 +457,9 @@ export default function DashboardOverview({
           <div>
             <h2 className="text-lg font-extrabold text-neutral-900 tracking-tight flex items-center gap-2">
               <Building2 className="w-5 h-5 text-neutral-700" />
-              <span>PG Property Portfolio Overview</span>
+              <span>{t('branchOverview')}</span>
             </h2>
-            <p className="text-xs text-neutral-500 mt-0.5">Performance breakdown across all registered PG branches</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{t('dashboardSub')}</p>
           </div>
           
           <button

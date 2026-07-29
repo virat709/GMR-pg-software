@@ -32,6 +32,7 @@ import { triggerWhatsAppMessage, getReceiptTemplate, getRentReminderTemplate } f
 import { generateReceiptPDF } from '../utils/receiptPdfGenerator';
 import { generateRentReminderPDF } from '../utils/reminderPdfGenerator';
 import PartnerStatementModal from './PartnerStatementModal';
+import { useLanguage } from '../context/LanguageContext';
 
 interface BillingManagerProps {
   userRole?: UserRole | null;
@@ -58,6 +59,7 @@ export default function BillingManager({
   onSendAlert,
   showToast = () => {}
 }: BillingManagerProps) {
+  const { t } = useLanguage();
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Pending' | 'Overdue'>('All');
@@ -123,10 +125,12 @@ export default function BillingManager({
       return;
     }
 
+    const monthForPayment = paymentDate ? paymentDate.substring(0, 7) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
     onAddPayment({
       tenantId: paymentTenantId,
       amount: Number(paymentAmount),
-      billingMonth: '2026-07', // For current month simulation
+      billingMonth: monthForPayment,
       paymentDate,
       paymentMode,
       referenceId: paymentReference,
@@ -286,12 +290,16 @@ export default function BillingManager({
     showToast(`Dues Statement PDF downloaded! Attach '${pdfFilename}' in WhatsApp chat.`, 'success');
   };
 
-  // Combined records for searchable billing status
-  const currentMonth = '2026-07';
+  // Combined records for searchable billing status (dynamic based on current date)
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const defaultDueDate = `${currentMonth}-05`;
+
   const displayBillingRecords = tenants
     .filter(t => t.status === 'Active' && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId))
     .map(tenant => {
-      // Find payment for this tenant for July 2026
+      // Find payment for this tenant for current month
       const paymentLog = payments.find(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
       const alertRecord = billingAlerts.find(b => b.tenantId === tenant.id);
       const property = properties.find(p => p.id === tenant.propertyId);
@@ -304,13 +312,12 @@ export default function BillingManager({
         roomNumber: tenant.roomNumber,
         rentAmount: tenant.rentAmount,
         status: paymentLog ? 'Paid' : (alertRecord?.status || 'Pending'),
-        dueDate: alertRecord?.dueDate || '2026-07-05',
+        dueDate: alertRecord?.dueDate || defaultDueDate,
         paymentLog: paymentLog || null
       };
     });
 
   // 30-Day Financial Totals
-  const now = new Date();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(now.getDate() - 30);
 
@@ -351,9 +358,9 @@ export default function BillingManager({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Total Amount Expected</span>
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('rentAmount')} Expected</span>
             <p className="text-2xl font-extrabold text-neutral-900 mt-0.5">₹{totalExpectedAmount.toLocaleString('en-IN')}</p>
-            <p className="text-[10px] text-neutral-400 mt-1">{scopeTenants.length} Active Residents</p>
+            <p className="text-[10px] text-neutral-400 mt-1">{scopeTenants.length} {t('activeResidents')}</p>
           </div>
           <div className="p-3 bg-neutral-100 text-neutral-700 rounded-xl">
             <Building className="w-5 h-5" />
@@ -362,7 +369,7 @@ export default function BillingManager({
 
         <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Total Rent Collected</span>
+            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{t('monthlyCollection')}</span>
             <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">₹{totalCollectedAmount.toLocaleString('en-IN')}</p>
             <p className="text-[10px] text-emerald-700 font-bold mt-1">Last 30 Days Transactions</p>
           </div>
@@ -373,7 +380,7 @@ export default function BillingManager({
 
         <div className="bg-white p-4.5 rounded-2xl border border-neutral-200 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-red-500 uppercase tracking-wide">Total Pending Dues</span>
+            <span className="text-xs font-semibold text-red-500 uppercase tracking-wide">{t('pendingDues')}</span>
             <p className="text-2xl font-extrabold text-red-600 mt-0.5">₹{totalDuesAmount.toLocaleString('en-IN')}</p>
             <p className="text-[10px] text-red-600 font-bold mt-1">{pendingAlerts.length} Outstanding Bills</p>
           </div>
@@ -389,7 +396,7 @@ export default function BillingManager({
           <Search className="absolute left-3 top-3 h-4.5 w-4.5 text-neutral-400" />
           <input 
             type="text" 
-            placeholder="Search billing by tenant or room number..." 
+            placeholder={t('searchTenantPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-neutral-950/10 focus:border-neutral-500 bg-neutral-50/50"
@@ -404,7 +411,7 @@ export default function BillingManager({
             title="Download 30-Day Partner Statement PDF"
           >
             <FileText className="w-4 h-4 text-emerald-100" />
-            <span>Partner 30-Day PDF</span>
+            <span>{t('partnerStatement')} PDF</span>
           </button>
 
           {/* Super Admin Payment History Log Audit Button */}
@@ -415,7 +422,7 @@ export default function BillingManager({
               title="Manage & Delete Payment History Logs (Super Admin)"
             >
               <History className="w-4 h-4 text-amber-400" />
-              <span>All-Time History ({payments.length})</span>
+              <span>History ({payments.length})</span>
             </button>
           )}
 
@@ -425,25 +432,25 @@ export default function BillingManager({
               onClick={() => setStatusFilter('All')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'All' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              All
+              {t('allStatuses')}
             </button>
             <button 
               onClick={() => setStatusFilter('Paid')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Paid' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              Paid
+              {t('paid')}
             </button>
             <button 
               onClick={() => setStatusFilter('Pending')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Pending' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              Pending
+              {t('overdue')}
             </button>
             <button 
               onClick={() => setStatusFilter('Overdue')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Overdue' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              Overdue
+              {t('overdue')}
             </button>
           </div>
 
@@ -462,7 +469,7 @@ export default function BillingManager({
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-neutral-900 text-sm">Automated Billing Logs (July 2026)</h3>
+            <h3 className="font-bold text-neutral-900 text-sm">Automated Billing Logs ({currentMonthLabel})</h3>
             <p className="text-xs text-neutral-400">Monthly billing statuses, push alerting channels, and paper receipt printer keys.</p>
           </div>
           <div className="flex items-center gap-4 text-xs font-semibold text-neutral-500">

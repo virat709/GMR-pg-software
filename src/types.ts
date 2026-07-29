@@ -76,3 +76,33 @@ export interface BillingAlert {
   status: 'Paid' | 'Pending' | 'Overdue';
   dueDate: string; // "YYYY-MM-DD"
 }
+
+export interface PendingTenantRegistration {
+  id: string;
+  propertyId: string;
+  propertyName?: string;
+  name: string;
+  phone: string;
+  email: string;
+  roomNumber: string;
+  rentAmount: number;
+  securityDeposit: number;
+  presentPaid: number;
+  idType: IDType;
+  idNumber: string;
+  checkInDate: string;
+  fatherName: string;
+  age: number;
+  dob: string;
+  educationalQualification: string;
+  employment: string;
+  officeAddress: string;
+  permanentAddress: string;
+  familyContactNumber: string;
+  aadharNo: string;
+  panNo: string;
+  submittedAt: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string;
+}
+

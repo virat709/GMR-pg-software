@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Property, Tenant, PaymentLog, BillingAlert } from '../types';
 import { generate30DayPartnerPDF } from '../utils/partnerPdfGenerator';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PartnerStatementModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function PartnerStatementModal({
   selectedPropertyId,
   showToast
 }: PartnerStatementModalProps) {
+  const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
 
   if (!isOpen) return null;
@@ -123,7 +125,7 @@ export default function PartnerStatementModal({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight">Partner 30-Day Statement</h2>
+                  <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight">{t('partnerStatementTitle')}</h2>
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Official PDF
                   </span>
@@ -318,7 +320,7 @@ export default function PartnerStatementModal({
                 onClick={onClose}
                 className="flex-1 sm:flex-none px-4 py-3 rounded-2xl border border-neutral-200 text-neutral-700 text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer"
               >
-                Close
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -327,7 +329,7 @@ export default function PartnerStatementModal({
                 className="flex-1 sm:flex-none px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4 text-white" />
-                <span>{isGenerating ? 'Generating PDF...' : 'Download Partner Statement PDF'}</span>
+                <span>{isGenerating ? 'Generating PDF...' : t('generatePdfBtn')}</span>
               </button>
             </div>
           </div>

@@ -28,8 +28,12 @@ import {
   Lock,
   UserCheck
 } from 'lucide-react';
-import { Tenant, PaymentLog, IDType, Property, UserRole } from '../types';
+import { Tenant, PaymentLog, IDType, Property, UserRole, PendingTenantRegistration } from '../types';
 import { triggerWhatsAppMessage, getAdmissionTemplate } from '../utils/whatsapp';
+import { useLanguage } from '../context/LanguageContext';
+import QrCodeModal from './QrCodeModal';
+import PendingRegistrationsModal from './PendingRegistrationsModal';
+import { QrCode, Clock, Bell } from 'lucide-react';
 
 interface TenantDirectoryProps {
   userRole?: UserRole | null;
@@ -37,13 +41,17 @@ interface TenantDirectoryProps {
   payments: PaymentLog[];
   properties?: Property[];
   selectedPropertyId?: string;
+  pendingRegistrations?: PendingTenantRegistration[];
   onAddTenant: (tenant: Omit<Tenant, 'id'>) => void;
   onEditTenant: (tenant: Tenant) => void;
   onDeleteTenant?: (tenantId: string) => void;
   onCheckOutTenant: (tenantId: string) => void;
   onDeletePayment?: (paymentId: string) => void;
+  onApprovePendingRegistration?: (registration: PendingTenantRegistration) => void;
+  onRejectPendingRegistration?: (registrationId: string, name: string) => void;
   selectedTenantId: string | null;
   onSelectTenant: (tenantId: string | null) => void;
+  showToast?: (msg: string, type?: 'success' | 'info') => void;
 }
 
 export default function TenantDirectory({
@@ -52,22 +60,29 @@ export default function TenantDirectory({
   payments,
   properties = [],
   selectedPropertyId = 'all',
+  pendingRegistrations = [],
   onAddTenant,
   onEditTenant,
   onDeleteTenant,
   onCheckOutTenant,
   onDeletePayment,
+  onApprovePendingRegistration,
+  onRejectPendingRegistration,
   selectedTenantId,
-  onSelectTenant
+  onSelectTenant,
+  showToast = () => {}
 }: TenantDirectoryProps) {
+  const { t } = useLanguage();
   // State for search and filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'CheckedOut'>('Active');
   
-  // State for Add/Edit Modal
+  // Modals State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
 
   // Form State
   const [propertyId, setPropertyId] = useState<string>('prop_1');
@@ -283,50 +298,77 @@ export default function TenantDirectory({
       <div className={`${selectedTenantId ? 'hidden lg:block lg:col-span-7' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
         
         {/* Search, Filter, and Action Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-neutral-200 shadow-sm flex flex-col gap-3">
+          
+          <div className="w-full relative">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-neutral-400" />
             <input 
               type="text" 
-              placeholder="Search by name, room number, or phone..." 
+              placeholder={t('searchTenantPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-500 bg-neutral-50/50"
+              className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-500 bg-neutral-50/50 min-h-[42px]"
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full">
             {/* Filter Toggle */}
-            <div className="inline-flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600">
+            <div className="inline-flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600 overflow-x-auto no-scrollbar max-w-full">
               <button 
                 onClick={() => setStatusFilter('Active')}
-                className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Active' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
+                className={`px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${statusFilter === 'Active' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
               >
-                Active
+                {t('active')}
               </button>
               <button 
                 onClick={() => setStatusFilter('CheckedOut')}
-                className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'CheckedOut' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
+                className={`px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${statusFilter === 'CheckedOut' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
               >
-                Left
+                {t('checkedOut')}
               </button>
               <button 
                 onClick={() => setStatusFilter('All')}
-                className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'All' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
+                className={`px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${statusFilter === 'All' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
               >
-                All
+                {t('allStatuses')}
               </button>
             </div>
 
-            {/* Add Tenant Button */}
-            <button
-              onClick={handleOpenAdd}
-              className="bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              id="add-tenant-btn"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>New Tenant</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {/* QR Code Self-Registration Button */}
+              <button
+                onClick={() => setIsQrModalOpen(true)}
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap min-h-[40px]"
+                title="Show & Print QR Code for Tenant Mobile Self-Registration"
+              >
+                <QrCode className="w-4 h-4 text-emerald-100 shrink-0" />
+                <span>{t('qrCodeTitle')}</span>
+              </button>
+
+              {/* Pending Approvals Notification Badge Button */}
+              <button
+                onClick={() => setIsPendingModalOpen(true)}
+                className={`flex-1 sm:flex-none relative text-xs font-extrabold px-3.5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer border whitespace-nowrap min-h-[40px] ${
+                  pendingRegistrations.length > 0
+                    ? 'bg-amber-500 text-neutral-950 border-amber-400 animate-pulse'
+                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border-neutral-200'
+                }`}
+                title="Verify & Confirm QR-scanned Resident Applications"
+              >
+                <Bell className="w-4 h-4 shrink-0" />
+                <span>{t('pendingApprovals')} ({pendingRegistrations.length})</span>
+              </button>
+
+              {/* Add Tenant Button */}
+              <button
+                onClick={handleOpenAdd}
+                className="flex-1 sm:flex-none bg-neutral-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap min-h-[40px]"
+                id="add-tenant-btn"
+              >
+                <UserPlus className="w-4 h-4 shrink-0" />
+                <span>{t('addResident')}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -336,19 +378,19 @@ export default function TenantDirectory({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-neutral-50 border-b border-neutral-200 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">Resident</th>
-                  <th className="py-3 px-4">Room</th>
-                  <th className="py-3 px-4">Rent Cycle</th>
-                  <th className="py-3 px-4">Check-In</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t('activeResidents')}</th>
+                  <th className="py-3 px-4">{t('roomNo')}</th>
+                  <th className="py-3 px-4">{t('rentAmount')}</th>
+                  <th className="py-3 px-4">{t('joiningDate')}</th>
+                  <th className="py-3 px-4">{t('actions')}</th>
+                  <th className="py-3 px-4 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 text-sm">
                 {filteredTenants.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-neutral-400">
-                      No tenants found matching your search.
+                      {t('noTenantsFound')}
                     </td>
                   </tr>
                 ) : (
@@ -1350,6 +1392,30 @@ export default function TenantDirectory({
           </motion.div>
         </div>
       )}
+
+      {/* QR CODE RECEPTION POSTER MODAL */}
+      <QrCodeModal 
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        properties={properties}
+        selectedPropertyId={selectedPropertyId}
+        showToast={showToast}
+      />
+
+      {/* PENDING SELF-REGISTRATION VERIFICATION QUEUE MODAL */}
+      <PendingRegistrationsModal
+        isOpen={isPendingModalOpen}
+        onClose={() => setIsPendingModalOpen(false)}
+        pendingRegistrations={pendingRegistrations}
+        properties={properties}
+        onApprove={(reg) => {
+          onApprovePendingRegistration?.(reg);
+          setIsPendingModalOpen(false);
+        }}
+        onReject={(id, name) => {
+          onRejectPendingRegistration?.(id, name);
+        }}
+      />
 
     </div>
   );

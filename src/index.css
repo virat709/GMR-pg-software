@@ -240,7 +240,38 @@
 }
 
 @layer utilities {
-  /* Printable area utility to isolate receipt for physical printers */
+  /* Printable area utility to isolate receipt for physical/* Print styling fixes */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  aside, header, button, .print\:hidden {
+    display: none !important;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Touch-friendly mobile form input enhancements */
+@media (max-width: 640px) {
+  input, select, textarea, button {
+    font-size: 14px !important;
+  }
+  
+  .mobile-touch-target {
+    min-height: 44px;
+  }
+}
+
   @media print {
     body {
       background-color: white !important;

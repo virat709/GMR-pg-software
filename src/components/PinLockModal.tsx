@@ -23,6 +23,8 @@ import {
   createUserWithEmailAndPassword,
   signInAnonymously
 } from 'firebase/auth';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageToggle from './LanguageToggle';
 
 interface PinLockModalProps {
   isUnlocked: boolean;
@@ -48,6 +50,7 @@ export default function PinLockModal({
   showToast,
   secondAdmins
 }: PinLockModalProps) {
+  const { t } = useLanguage();
   // Local combined state for instant UI updates
   const [localAdmins, setLocalAdmins] = useState<SecondAdmin[]>([]);
 
@@ -229,6 +232,11 @@ export default function PinLockModal({
               <div className="absolute -top-20 -left-20 w-40 h-40 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-yellow-500/15 rounded-full blur-3xl pointer-events-none" />
 
+              {/* Language Switcher Top Corner */}
+              <div className="absolute top-4 right-4 z-20">
+                <LanguageToggle variant="compact" />
+              </div>
+
               {/* ORIGINAL GMR LOGO IMAGE */}
               <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-3 flex items-center justify-center relative">
                 <div className="absolute inset-0 bg-white/10 rounded-3xl blur-md pointer-events-none" />
@@ -241,10 +249,10 @@ export default function PinLockModal({
 
               {/* BRAND HEADING */}
               <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-amber-300 to-yellow-400 tracking-wide uppercase">
-                GMR Luxury Co-Living
+                {t('welcomeTitle')}
               </h2>
               <p className="text-xs text-neutral-400 font-semibold tracking-wider uppercase mb-6 mt-0.5">
-                Portal Authentication
+                {t('welcomeSub')}
               </p>
 
               {/* AUTH ERROR ALERT */}
@@ -263,7 +271,7 @@ export default function PinLockModal({
               <form onSubmit={handleLoginSubmit} className="space-y-4 text-left">
                 <div>
                   <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide block mb-1">
-                    Admin Email Address
+                    {t('emailAddress')}
                   </label>
                   <div className="relative">
                     <input
@@ -280,7 +288,7 @@ export default function PinLockModal({
 
                 <div>
                   <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide block mb-1">
-                    Password
+                    {t('passwordPin')}
                   </label>
                   <div className="relative">
                     <input
@@ -312,7 +320,7 @@ export default function PinLockModal({
                   ) : (
                     <>
                       <LogIn className="w-4 h-4" />
-                      <span>Sign In to GMR Portal</span>
+                      <span>{t('unlockBtn')}</span>
                     </>
                   )}
                 </button>

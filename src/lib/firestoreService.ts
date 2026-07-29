@@ -7,13 +7,14 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Property, Tenant, PaymentLog, SecondAdmin } from '../types';
+import { Property, Tenant, PaymentLog, SecondAdmin, PendingTenantRegistration } from '../types';
 import { initialProperties, initialTenants, initialPayments } from '../mockData';
 
 const PROPERTIES_COLLECTION = 'properties';
 const TENANTS_COLLECTION = 'tenants';
 const PAYMENTS_COLLECTION = 'payments';
 const SECOND_ADMINS_COLLECTION = 'second_admins';
+const PENDING_REGISTRATIONS_COLLECTION = 'pending_registrations';
 
 // Helper to remove any 'undefined' values before passing object to Firestore
 function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
@@ -295,6 +296,60 @@ export async function deleteSecondAdminInDb(adminId: string) {
     console.log('Deleted Second Admin from Cloud Firestore:', adminId);
   } catch (err) {
     console.error('Firestore Second Admin delete error:', err);
+  }
+}
+
+// Subscribe to Pending Registrations Collection
+export function subscribePendingRegistrations(callback: (pending: PendingTenantRegistration[]) => void) {
+  try {
+    const colRef = collection(db, PENDING_REGISTRATIONS_COLLECTION);
+    return onSnapshot(colRef, (snapshot) => {
+      const pending: PendingTenantRegistration[] = snapshot.docs.map((doc) => doc.data() as PendingTenantRegistration);
+      localStorage.setItem('gmr_pending_registrations', JSON.stringify(pending));
+      callback(pending);
+    }, (error) => {
+      console.warn('Pending registrations snapshot notice:', error?.message || error);
+      const localStr = localStorage.getItem('gmr_pending_registrations');
+      const local = localStr !== null ? JSON.parse(localStr) : [];
+      callback(local);
+    });
+  } catch (err) {
+    console.warn('Pending registrations subscription error:', err);
+    const localStr = localStorage.getItem('gmr_pending_registrations');
+    const local = localStr !== null ? JSON.parse(localStr) : [];
+    callback(local);
+    return () => {};
+  }
+}
+
+export async function savePendingRegistrationInDb(registration: PendingTenantRegistration) {
+  try {
+    const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
+    const updated = [...local.filter(r => r.id !== registration.id), registration];
+    localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    const sanitized = cleanForFirestore(registration);
+    await setDoc(doc(db, PENDING_REGISTRATIONS_COLLECTION, registration.id), sanitized, { merge: true });
+    console.log('Saved Pending Registration to Cloud Firestore:', registration.id);
+  } catch (err) {
+    console.error('Firestore Pending Registration save error:', err);
+  }
+}
+
+export async function deletePendingRegistrationInDb(registrationId: string) {
+  try {
+    const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
+    const updated = local.filter(r => r.id !== registrationId);
+    localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await deleteDoc(doc(db, PENDING_REGISTRATIONS_COLLECTION, registrationId));
+    console.log('Deleted Pending Registration from Cloud Firestore:', registrationId);
+  } catch (err) {
+    console.error('Firestore Pending Registration delete error:', err);
   }
 }
 
