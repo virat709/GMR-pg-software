@@ -1,0 +1,24 @@
+{
+  "name": "GRM coliving - Feels like home",
+  "short_name": "GMR PG",
+  "description": "Official GMR Luxury Co-Living PG Management & Admission App",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#06582a",
+  "theme_color": "#06582a",
+  "icons": [
+    {
+      "src": "/logo-transparent.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-transparent.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
