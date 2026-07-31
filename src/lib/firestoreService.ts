@@ -16,6 +16,15 @@ const PAYMENTS_COLLECTION = 'payments';
 const SECOND_ADMINS_COLLECTION = 'second_admins';
 const PENDING_REGISTRATIONS_COLLECTION = 'pending_registrations';
 
+// Helper to deduplicate array by 'id'
+export function deduplicateById<T extends { id: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  items.forEach((item) => {
+    if (item && item.id) map.set(item.id, item);
+  });
+  return Array.from(map.values());
+}
+
 // Helper to remove any 'undefined' values before passing object to Firestore
 function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
   const clean: Record<string, any> = {};
@@ -36,8 +45,8 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
       const initialized = localStorage.getItem('gmr_properties_initialized');
       if (snapshot.empty && !initialized) {
         localStorage.setItem('gmr_properties_initialized', 'true');
-        localStorage.setItem('gmr_properties', JSON.stringify(initialProperties));
-        callback(initialProperties);
+        localStorage.setItem('gmr_properties', JSON.stringify(deduplicateById<Property>(initialProperties)));
+        callback(deduplicateById<Property>(initialProperties));
         initialProperties.forEach((p: Property) => savePropertyInDb(p));
       } else if (snapshot.empty) {
         localStorage.setItem('gmr_properties_initialized', 'true');
@@ -45,20 +54,20 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
         callback([]);
       } else {
         localStorage.setItem('gmr_properties_initialized', 'true');
-        const properties: Property[] = snapshot.docs.map((doc) => doc.data() as Property);
+        const properties: Property[] = deduplicateById<Property>(snapshot.docs.map((doc) => doc.data() as Property));
         localStorage.setItem('gmr_properties', JSON.stringify(properties));
         callback(properties);
       }
     }, (error) => {
       console.warn('Properties snapshot notice:', error?.message || error);
       const localStr = localStorage.getItem('gmr_properties');
-      const local = localStr !== null ? JSON.parse(localStr) : initialProperties;
+      const local = deduplicateById<Property>(localStr !== null ? JSON.parse(localStr) : initialProperties);
       callback(local);
     });
   } catch (err) {
     console.warn('Properties subscription error:', err);
     const localStr = localStorage.getItem('gmr_properties');
-    const local = localStr !== null ? JSON.parse(localStr) : initialProperties;
+    const local = deduplicateById<Property>(localStr !== null ? JSON.parse(localStr) : initialProperties);
     callback(local);
     return () => {};
   }
@@ -72,28 +81,28 @@ export function subscribeTenants(callback: (tenants: Tenant[]) => void) {
       const initialized = localStorage.getItem('gmr_tenants_initialized');
       if (snapshot.empty && !initialized) {
         localStorage.setItem('gmr_tenants_initialized', 'true');
-        localStorage.setItem('gmr_tenants', JSON.stringify(initialTenants));
-        callback(initialTenants);
+        localStorage.setItem('gmr_tenants', JSON.stringify(deduplicateById<Tenant>(initialTenants)));
+        callback(deduplicateById<Tenant>(initialTenants));
       } else if (snapshot.empty) {
         localStorage.setItem('gmr_tenants_initialized', 'true');
         localStorage.setItem('gmr_tenants', '[]');
         callback([]);
       } else {
         localStorage.setItem('gmr_tenants_initialized', 'true');
-        const tenants: Tenant[] = snapshot.docs.map((doc) => doc.data() as Tenant);
+        const tenants: Tenant[] = deduplicateById<Tenant>(snapshot.docs.map((doc) => doc.data() as Tenant));
         localStorage.setItem('gmr_tenants', JSON.stringify(tenants));
         callback(tenants);
       }
     }, (error) => {
       console.warn('Tenants snapshot notice:', error?.message || error);
       const localStr = localStorage.getItem('gmr_tenants');
-      const local = localStr !== null ? JSON.parse(localStr) : initialTenants;
+      const local = deduplicateById<Tenant>(localStr !== null ? JSON.parse(localStr) : initialTenants);
       callback(local);
     });
   } catch (err) {
     console.warn('Tenants subscription error:', err);
     const localStr = localStorage.getItem('gmr_tenants');
-    const local = localStr !== null ? JSON.parse(localStr) : initialTenants;
+    const local = deduplicateById<Tenant>(localStr !== null ? JSON.parse(localStr) : initialTenants);
     callback(local);
     return () => {};
   }
@@ -107,28 +116,28 @@ export function subscribePayments(callback: (payments: PaymentLog[]) => void) {
       const initialized = localStorage.getItem('gmr_payments_initialized');
       if (snapshot.empty && !initialized) {
         localStorage.setItem('gmr_payments_initialized', 'true');
-        localStorage.setItem('gmr_payments', JSON.stringify(initialPayments));
-        callback(initialPayments);
+        localStorage.setItem('gmr_payments', JSON.stringify(deduplicateById<PaymentLog>(initialPayments)));
+        callback(deduplicateById<PaymentLog>(initialPayments));
       } else if (snapshot.empty) {
         localStorage.setItem('gmr_payments_initialized', 'true');
         localStorage.setItem('gmr_payments', '[]');
         callback([]);
       } else {
         localStorage.setItem('gmr_payments_initialized', 'true');
-        const payments: PaymentLog[] = snapshot.docs.map((doc) => doc.data() as PaymentLog);
+        const payments: PaymentLog[] = deduplicateById<PaymentLog>(snapshot.docs.map((doc) => doc.data() as PaymentLog));
         localStorage.setItem('gmr_payments', JSON.stringify(payments));
         callback(payments);
       }
     }, (error) => {
       console.warn('Payments snapshot notice:', error?.message || error);
       const localStr = localStorage.getItem('gmr_payments');
-      const local = localStr !== null ? JSON.parse(localStr) : initialPayments;
+      const local = deduplicateById<PaymentLog>(localStr !== null ? JSON.parse(localStr) : initialPayments);
       callback(local);
     });
   } catch (err) {
     console.warn('Payments subscription error:', err);
     const localStr = localStorage.getItem('gmr_payments');
-    const local = localStr !== null ? JSON.parse(localStr) : initialPayments;
+    const local = deduplicateById<PaymentLog>(localStr !== null ? JSON.parse(localStr) : initialPayments);
     callback(local);
     return () => {};
   }
@@ -139,17 +148,17 @@ export function subscribeSecondAdmins(callback: (admins: SecondAdmin[]) => void)
   try {
     const colRef = collection(db, SECOND_ADMINS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
-      const admins: SecondAdmin[] = snapshot.docs.map((doc) => doc.data() as SecondAdmin);
+      const admins: SecondAdmin[] = deduplicateById<SecondAdmin>(snapshot.docs.map((doc) => doc.data() as SecondAdmin));
       localStorage.setItem('gmr_second_admins', JSON.stringify(admins));
       callback(admins);
     }, (error) => {
       console.warn('SecondAdmins snapshot notice:', error?.message || error);
-      const local = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+      const local = deduplicateById<SecondAdmin>(JSON.parse(localStorage.getItem('gmr_second_admins') || '[]'));
       callback(local);
     });
   } catch (err) {
     console.warn('SecondAdmins subscription error:', err);
-    const local = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const local = deduplicateById<SecondAdmin>(JSON.parse(localStorage.getItem('gmr_second_admins') || '[]'));
     callback(local);
     return () => {};
   }
@@ -177,6 +186,7 @@ export async function deletePropertyInDb(propertyId: string) {
     const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
     const updated = local.filter(p => p.id !== propertyId);
     localStorage.setItem('gmr_properties', JSON.stringify(updated));
+    localStorage.setItem('gmr_properties_initialized', 'true');
   } catch (e) {}
 
   try {
@@ -304,19 +314,19 @@ export function subscribePendingRegistrations(callback: (pending: PendingTenantR
   try {
     const colRef = collection(db, PENDING_REGISTRATIONS_COLLECTION);
     return onSnapshot(colRef, (snapshot) => {
-      const pending: PendingTenantRegistration[] = snapshot.docs.map((doc) => doc.data() as PendingTenantRegistration);
+      const pending: PendingTenantRegistration[] = deduplicateById<PendingTenantRegistration>(snapshot.docs.map((doc) => doc.data() as PendingTenantRegistration));
       localStorage.setItem('gmr_pending_registrations', JSON.stringify(pending));
       callback(pending);
     }, (error) => {
       console.warn('Pending registrations snapshot notice:', error?.message || error);
       const localStr = localStorage.getItem('gmr_pending_registrations');
-      const local = localStr !== null ? JSON.parse(localStr) : [];
+      const local = deduplicateById<PendingTenantRegistration>(localStr !== null ? JSON.parse(localStr) : []);
       callback(local);
     });
   } catch (err) {
     console.warn('Pending registrations subscription error:', err);
     const localStr = localStorage.getItem('gmr_pending_registrations');
-    const local = localStr !== null ? JSON.parse(localStr) : [];
+    const local = deduplicateById<PendingTenantRegistration>(localStr !== null ? JSON.parse(localStr) : []);
     callback(local);
     return () => {};
   }

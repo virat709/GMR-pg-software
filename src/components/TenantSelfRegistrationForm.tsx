@@ -13,7 +13,8 @@ import {
   BookOpen, 
   ShieldCheck, 
   Send,
-  Home
+  Home,
+  Lock
 } from 'lucide-react';
 import { Property, IDType, PendingTenantRegistration } from '../types';
 import { savePendingRegistrationInDb } from '../lib/firestoreService';
@@ -146,16 +147,47 @@ export default function TenantSelfRegistrationForm({ properties, onFinish }: Ten
               Status: <span className="text-amber-400 font-bold">Pending Manager Verification</span>
             </div>
 
-            {onFinish && (
-              <div className="pt-2">
-                <button
-                  onClick={onFinish}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs cursor-pointer transition-colors"
-                >
-                  Close Form
-                </button>
-              </div>
-            )}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitted(false);
+                  setName('');
+                  setPhone('');
+                  setEmail('');
+                  setRoomNumber('');
+                  setRentAmount('');
+                  setSecurityDeposit('');
+                  setPresentPaid('');
+                  setIdNumber('');
+                  setFatherName('');
+                  setAadharNo('');
+                  setPanNo('');
+                }}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Register Another Resident
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onFinish) {
+                    onFinish();
+                  }
+                  // Clear query param / hash if present and redirect to login
+                  if (typeof window !== 'undefined') {
+                    if (window.location.search.includes('register=true') || window.location.hash.includes('register')) {
+                      window.location.href = window.location.origin + window.location.pathname;
+                    }
+                  }
+                }}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs cursor-pointer transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4 text-emerald-100" />
+                <span>Go to Portal Login</span>
+              </button>
+            </div>
           </motion.div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 sm:p-7 space-y-5">

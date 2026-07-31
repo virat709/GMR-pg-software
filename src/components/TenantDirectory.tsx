@@ -382,7 +382,7 @@ export default function TenantDirectory({
                   <th className="py-3 px-4">{t('roomNo')}</th>
                   <th className="py-3 px-4">{t('rentAmount')}</th>
                   <th className="py-3 px-4">{t('joiningDate')}</th>
-                  <th className="py-3 px-4">{t('actions')}</th>
+                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">{t('actions')}</th>
                 </tr>
               </thead>
@@ -436,7 +436,7 @@ export default function TenantDirectory({
                           {tenant.status === 'Active' && (
                             <button
                               onClick={() => {
-                                const checkInMsg = `Hello, *${tenant.name}*! Just checking in to see if everything is comfortable with your stay in *Room ${tenant.roomNumber}* at *GRM coliving*. Please let us know if you need any assistance or maintenance. We are here to make you feel like home! 🏠✨\n\nRegards,\n*GRM coliving Management*`;
+                                const checkInMsg = `Hello, *${tenant.name}*! Just checking in to see if everything is comfortable with your stay in *Room ${tenant.roomNumber}* at *GMR Luxury PG*. Please let us know if you need any assistance or maintenance. We are here to make you feel like home! 🏠✨\n\nRegards,\n*GMR PG Management*`;
                                 triggerWhatsAppMessage(tenant.phone, checkInMsg);
                               }}
                               className="p-1.5 hover:bg-emerald-50 rounded-md text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
@@ -1344,7 +1344,7 @@ export default function TenantDirectory({
                   </div>
                   
                   <div className="border-b border-neutral-400 w-48 mx-auto h-8"></div>
-                  <p className="font-bold text-neutral-800">For GRM coliving</p>
+                  <p className="font-bold text-neutral-800">For GMR Luxury PG</p>
                   <p className="text-[9px] text-neutral-400">Authorized Signatory & Seal</p>
                 </div>
               </div>

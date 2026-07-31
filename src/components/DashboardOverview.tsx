@@ -251,9 +251,11 @@ export default function DashboardOverview({
   const handleDeleteProperty = (property: Property) => {
     const tenantCount = tenants.filter(t => t.propertyId === property.id && t.status === 'Active').length;
     const confirmMsg = tenantCount > 0
-      ? `⚠️ "${property.name}" has ${tenantCount} active resident(s).\n\nDeleting this branch will NOT remove the residents but they will be unlinked.\n\nAre you sure you want to permanently delete this branch?`
+      ? `⚠️ "${property.name}" has ${tenantCount} active resident(s).\n\nDeleting this branch will delete the branch and all associated resident records.\n\nAre you sure you want to permanently delete this branch?`
       : `Delete "${property.name}" permanently? This cannot be undone.`;
     if (window.confirm(confirmMsg)) {
+      setIsEditPropertyOpen(false);
+      setEditingProperty(null);
       onDeleteProperty?.(property.id);
     }
   };

@@ -3,7 +3,7 @@ export type Language = 'en' | 'te';
 export const translations = {
   en: {
     // Brand & Common
-    appName: 'GRM coliving',
+    appName: 'GMR Luxury Co-Living',
     tagline: 'Feels like home',
     accessMode: 'Access Mode',
     superAccess: 'Super Access',
@@ -155,7 +155,7 @@ export const translations = {
   },
   te: {
     // Brand & Common
-    appName: 'GRM కో-లివింగ్',
+    appName: 'GMR లగ్జరీ కో-లివింగ్',
     tagline: 'మా స్వగృహం లాంటి అనుభూతి',
     accessMode: 'యాక్సెస్ మోడ్',
     superAccess: 'సూపర్ యాక్సెస్',

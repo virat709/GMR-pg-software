@@ -26,7 +26,11 @@ export function generateReceiptPDF({
   });
 
   const now = new Date();
-  const receiptNo = `GMR-RCPT-${payment.referenceId.replace(/\D/g, '').slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
+  const cleanedRefDigits = payment.referenceId ? payment.referenceId.replace(/\D/g, '') : '';
+  const refSuffix = cleanedRefDigits.length >= 4 
+    ? cleanedRefDigits.slice(-6) 
+    : ((payment.id ? payment.id.replace(/\D/g, '') : '') + Math.floor(100000 + Math.random() * 900000)).slice(-6);
+  const receiptNo = `GMR-RCPT-${refSuffix}`;
   const branchHeader = propertyName || 'GMR LUXURY CO-LIVING PG';
   const branchAddr = propertyAddress || '#7 Akash Nagar Main Road, Mahadevapura, Bengaluru';
 

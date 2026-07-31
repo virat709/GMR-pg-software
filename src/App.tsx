@@ -331,13 +331,24 @@ function MainContent() {
   const currentMonthNum = String(now.getMonth() + 1).padStart(2, '0');
   const currentMonth = `${currentYear}-${currentMonthNum}`;
   const dueDate = `${currentMonth}-05`;
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const isPastDueDate = todayStr > dueDate;
 
   const billingAlerts: BillingAlert[] = tenants
     .filter(t => t.status === 'Active')
     .map(tenant => {
-      const hasPaid = payments.some(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
-      const status = hasPaid ? 'Paid' : 'Overdue';
+      const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
+      const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
       
+      let status: 'Paid' | 'Pending' | 'Overdue';
+      if (totalPaid >= tenant.rentAmount) {
+        status = 'Paid';
+      } else if (isPastDueDate) {
+        status = 'Overdue';
+      } else {
+        status = 'Pending';
+      }
+
       return {
         tenantId: tenant.id,
         propertyId: tenant.propertyId,
@@ -564,7 +575,7 @@ function MainContent() {
             <img src="/logo-transparent.png" alt="GMR Luxury Co-Living Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <span className="font-extrabold text-white text-sm tracking-wide block leading-none">GRM coliving</span>
+            <span className="font-extrabold text-white text-sm tracking-wide block leading-none">GMR Luxury PG</span>
             <span className="text-[12px] text-emerald-300 font-bold tracking-wider font-script block mt-0.5">Feels like home</span>
           </div>
         </div>

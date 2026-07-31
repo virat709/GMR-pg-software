@@ -78,17 +78,23 @@ export default function BillingManager({
   const [paymentAmount, setPaymentAmount] = useState<number>(8500);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('UPI');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentBillingMonth, setPaymentBillingMonth] = useState<string>(
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  );
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
 
   // Auto-fill form when recording payment from list
   const handleOpenRecordPayment = (alert: BillingAlert | null) => {
+    const curMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     if (alert) {
       setSelectedAlertForPayment(alert);
       setPaymentTenantId(alert.tenantId);
       setPaymentAmount(alert.rentAmount);
+      setPaymentBillingMonth(alert.billingMonth || curMonth);
     } else {
       setSelectedAlertForPayment(null);
+      setPaymentBillingMonth(curMonth);
       const activeTenants = tenants.filter(t => t.status === 'Active');
       if (activeTenants.length > 0) {
         setPaymentTenantId(activeTenants[0].id);
@@ -125,7 +131,7 @@ export default function BillingManager({
       return;
     }
 
-    const monthForPayment = paymentDate ? paymentDate.substring(0, 7) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const monthForPayment = paymentBillingMonth || (paymentDate ? paymentDate.substring(0, 7) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
 
     onAddPayment({
       tenantId: paymentTenantId,
@@ -680,20 +686,32 @@ export default function BillingManager({
                 </div>
               </div>
 
-              {/* Payment Mode & Date */}
+              {/* Payment Mode */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Payment Mode *</label>
+                <select
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50"
+                >
+                  <option value="UPI">UPI / GPay</option>
+                  <option value="Cash">Cash Handover</option>
+                  <option value="Net Banking">Net Banking</option>
+                  <option value="Card">Credit/Debit Card</option>
+                </select>
+              </div>
+
+              {/* Target Billing Month & Payment Date */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Payment Mode *</label>
-                  <select
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50"
-                  >
-                    <option value="UPI">UPI / GPay</option>
-                    <option value="Cash">Cash Handover</option>
-                    <option value="Net Banking">Net Banking</option>
-                    <option value="Card">Credit/Debit Card</option>
-                  </select>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Billing Month *</label>
+                  <input 
+                    type="month" 
+                    required
+                    value={paymentBillingMonth}
+                    onChange={(e) => setPaymentBillingMonth(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 font-mono"
+                  />
                 </div>
 
                 <div className="space-y-1">
