@@ -170,7 +170,9 @@ export async function savePropertyInDb(property: Property) {
     const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
     const updated = [...local.filter(p => p.id !== property.id), property];
     localStorage.setItem('gmr_properties', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage write warning for property:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(property);
@@ -187,7 +189,9 @@ export async function deletePropertyInDb(propertyId: string) {
     const updated = local.filter(p => p.id !== propertyId);
     localStorage.setItem('gmr_properties', JSON.stringify(updated));
     localStorage.setItem('gmr_properties_initialized', 'true');
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage delete warning for property:', e);
+  }
 
   try {
     await deleteDoc(doc(db, PROPERTIES_COLLECTION, propertyId));
@@ -203,7 +207,9 @@ export async function saveTenantInDb(tenant: Tenant) {
     const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
     const updated = [...local.filter(t => t.id !== tenant.id), tenant];
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage write warning for tenant:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(tenant);
@@ -219,7 +225,9 @@ export async function updateTenantInDb(tenantId: string, updates: Partial<Tenant
     const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
     const updated = local.map(t => t.id === tenantId ? { ...t, ...updates } : t);
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage update warning for tenant:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(updates);
@@ -235,7 +243,9 @@ export async function deleteTenantInDb(tenantId: string) {
     const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
     const updated = local.filter(t => t.id !== tenantId);
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage delete warning for tenant:', e);
+  }
 
   try {
     await deleteDoc(doc(db, TENANTS_COLLECTION, tenantId));
@@ -251,7 +261,9 @@ export async function savePaymentInDb(payment: PaymentLog) {
     const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
     const updated = [...local.filter(p => p.id !== payment.id), payment];
     localStorage.setItem('gmr_payments', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage write warning for payment:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(payment);
@@ -267,7 +279,9 @@ export async function deletePaymentInDb(paymentId: string) {
     const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
     const updated = local.filter(p => p.id !== paymentId);
     localStorage.setItem('gmr_payments', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage delete warning for payment:', e);
+  }
 
   try {
     await deleteDoc(doc(db, PAYMENTS_COLLECTION, paymentId));
@@ -283,7 +297,9 @@ export async function saveSecondAdminInDb(admin: SecondAdmin) {
     const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
     const updated = [...local.filter(a => a.id !== admin.id), admin];
     localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage write warning for second admin:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(admin);
@@ -299,7 +315,9 @@ export async function deleteSecondAdminInDb(adminId: string) {
     const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
     const updated = local.filter(a => a.id !== adminId);
     localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage delete warning for second admin:', e);
+  }
 
   try {
     await deleteDoc(doc(db, SECOND_ADMINS_COLLECTION, adminId));
@@ -337,7 +355,9 @@ export async function savePendingRegistrationInDb(registration: PendingTenantReg
     const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
     const updated = [...local.filter(r => r.id !== registration.id), registration];
     localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage write warning for pending registration:', e);
+  }
 
   try {
     const sanitized = cleanForFirestore(registration);
@@ -353,7 +373,9 @@ export async function deletePendingRegistrationInDb(registrationId: string) {
     const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
     const updated = local.filter(r => r.id !== registrationId);
     localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Local storage delete warning for pending registration:', e);
+  }
 
   try {
     await deleteDoc(doc(db, PENDING_REGISTRATIONS_COLLECTION, registrationId));
