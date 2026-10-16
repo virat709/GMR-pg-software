@@ -317,7 +317,7 @@ export default function BillingManager({
         name: tenant.name,
         roomNumber: tenant.roomNumber,
         rentAmount: tenant.rentAmount,
-        status: paymentLog ? 'Paid' : (alertRecord?.status || 'Pending'),
+        status: alertRecord?.status || 'Pending',
         dueDate: alertRecord?.dueDate || defaultDueDate,
         paymentLog: paymentLog || null
       };
@@ -450,7 +450,7 @@ export default function BillingManager({
               onClick={() => setStatusFilter('Pending')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Pending' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              {t('overdue')}
+              {t('pending')}
             </button>
             <button 
               onClick={() => setStatusFilter('Overdue')}

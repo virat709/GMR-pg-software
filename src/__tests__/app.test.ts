@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
 import { deduplicateById } from '../lib/firestoreService';
+import { cleanPhoneNumber, getWhatsAppLink } from '../utils/whatsapp';
+import { translations } from '../translations';
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
@@ -177,6 +179,32 @@ describe('Rent & Billing Status Calculation Tests', () => {
 
     expect(newPayment.billingMonth).toBe('2026-06');
     expect(newPayment.paymentDate).toBe('2026-07-02');
+  });
+});
+
+describe('WhatsApp Utilities Tests', () => {
+  it('formats 10-digit phone numbers with India country code 91', () => {
+    expect(cleanPhoneNumber('9876543210')).toBe('919876543210');
+    expect(cleanPhoneNumber('+91 98765 43210')).toBe('919876543210');
+    expect(cleanPhoneNumber('919876543210')).toBe('919876543210');
+  });
+
+  it('generates correct wa.me link with encoded text message', () => {
+    const link = getWhatsAppLink('9876543210', 'Hello World!');
+    expect(link).toBe('https://wa.me/919876543210?text=Hello%20World!');
+  });
+});
+
+describe('Translation Completeness Tests', () => {
+  it('ensures English and Telugu translations have identical keys', () => {
+    const enKeys = Object.keys(translations.en).sort();
+    const teKeys = Object.keys(translations.te).sort();
+    expect(enKeys).toEqual(teKeys);
+  });
+
+  it('contains the pending translation key in both languages', () => {
+    expect(translations.en.pending).toBe('Pending');
+    expect(translations.te.pending).toBe('పెండింగ్');
   });
 });
 
