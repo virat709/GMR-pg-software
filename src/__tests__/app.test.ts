@@ -1,6 +1,45 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
-import { deduplicateById } from '../lib/firestoreService';
+import { deduplicateById, safeParseLocalStorage } from '../lib/firestoreService';
+
+describe('Safe Local Storage Parser Tests', () => {
+  it('returns parsed data when localStorage contains valid JSON', () => {
+    const storageMap = new Map<string, string>();
+    storageMap.set('test_key', JSON.stringify({ a: 1 }));
+    const fakeLocalStorage = {
+      getItem: (k: string) => storageMap.get(k) ?? null,
+    };
+    const globalRef = globalThis as any;
+    const originalLocalStorage = globalRef.localStorage;
+    globalRef.localStorage = fakeLocalStorage;
+
+    const result = safeParseLocalStorage('test_key', { a: 0 });
+    expect(result).toEqual({ a: 1 });
+
+    globalRef.localStorage = originalLocalStorage;
+  });
+
+  it('returns fallback when localStorage item does not exist', () => {
+    const result = safeParseLocalStorage('non_existent_key', ['fallback']);
+    expect(result).toEqual(['fallback']);
+  });
+
+  it('returns fallback gracefully when localStorage item contains malformed JSON', () => {
+    const storageMap = new Map<string, string>();
+    storageMap.set('corrupt_key', '{ invalid json ...');
+    const fakeLocalStorage = {
+      getItem: (k: string) => storageMap.get(k) ?? null,
+    };
+    const globalRef = globalThis as any;
+    const originalLocalStorage = globalRef.localStorage;
+    globalRef.localStorage = fakeLocalStorage;
+
+    const result = safeParseLocalStorage('corrupt_key', [1, 2, 3]);
+    expect(result).toEqual([1, 2, 3]);
+
+    globalRef.localStorage = originalLocalStorage;
+  });
+});
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {

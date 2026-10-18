@@ -37,6 +37,19 @@ function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string
   return clean;
 }
 
+// Safe localStorage parser fallback
+export function safeParseLocalStorage<T>(key: string, fallback: T): T {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const item = localStorage.getItem(key);
+    if (item === null) return fallback;
+    return JSON.parse(item) as T;
+  } catch (err) {
+    console.warn(`Failed to parse localStorage key "${key}":`, err);
+    return fallback;
+  }
+}
+
 // Subscribe to Properties collection with Fail-Safe Persistence
 export function subscribeProperties(callback: (properties: Property[]) => void) {
   try {
@@ -60,14 +73,12 @@ export function subscribeProperties(callback: (properties: Property[]) => void) 
       }
     }, (error) => {
       console.warn('Properties snapshot notice:', error?.message || error);
-      const localStr = localStorage.getItem('gmr_properties');
-      const local = deduplicateById<Property>(localStr !== null ? JSON.parse(localStr) : initialProperties);
+      const local = deduplicateById<Property>(safeParseLocalStorage('gmr_properties', initialProperties));
       callback(local);
     });
   } catch (err) {
     console.warn('Properties subscription error:', err);
-    const localStr = localStorage.getItem('gmr_properties');
-    const local = deduplicateById<Property>(localStr !== null ? JSON.parse(localStr) : initialProperties);
+    const local = deduplicateById<Property>(safeParseLocalStorage('gmr_properties', initialProperties));
     callback(local);
     return () => {};
   }
@@ -95,14 +106,12 @@ export function subscribeTenants(callback: (tenants: Tenant[]) => void) {
       }
     }, (error) => {
       console.warn('Tenants snapshot notice:', error?.message || error);
-      const localStr = localStorage.getItem('gmr_tenants');
-      const local = deduplicateById<Tenant>(localStr !== null ? JSON.parse(localStr) : initialTenants);
+      const local = deduplicateById<Tenant>(safeParseLocalStorage('gmr_tenants', initialTenants));
       callback(local);
     });
   } catch (err) {
     console.warn('Tenants subscription error:', err);
-    const localStr = localStorage.getItem('gmr_tenants');
-    const local = deduplicateById<Tenant>(localStr !== null ? JSON.parse(localStr) : initialTenants);
+    const local = deduplicateById<Tenant>(safeParseLocalStorage('gmr_tenants', initialTenants));
     callback(local);
     return () => {};
   }
@@ -130,14 +139,12 @@ export function subscribePayments(callback: (payments: PaymentLog[]) => void) {
       }
     }, (error) => {
       console.warn('Payments snapshot notice:', error?.message || error);
-      const localStr = localStorage.getItem('gmr_payments');
-      const local = deduplicateById<PaymentLog>(localStr !== null ? JSON.parse(localStr) : initialPayments);
+      const local = deduplicateById<PaymentLog>(safeParseLocalStorage('gmr_payments', initialPayments));
       callback(local);
     });
   } catch (err) {
     console.warn('Payments subscription error:', err);
-    const localStr = localStorage.getItem('gmr_payments');
-    const local = deduplicateById<PaymentLog>(localStr !== null ? JSON.parse(localStr) : initialPayments);
+    const local = deduplicateById<PaymentLog>(safeParseLocalStorage('gmr_payments', initialPayments));
     callback(local);
     return () => {};
   }
@@ -153,12 +160,12 @@ export function subscribeSecondAdmins(callback: (admins: SecondAdmin[]) => void)
       callback(admins);
     }, (error) => {
       console.warn('SecondAdmins snapshot notice:', error?.message || error);
-      const local = deduplicateById<SecondAdmin>(JSON.parse(localStorage.getItem('gmr_second_admins') || '[]'));
+      const local = deduplicateById<SecondAdmin>(safeParseLocalStorage('gmr_second_admins', []));
       callback(local);
     });
   } catch (err) {
     console.warn('SecondAdmins subscription error:', err);
-    const local = deduplicateById<SecondAdmin>(JSON.parse(localStorage.getItem('gmr_second_admins') || '[]'));
+    const local = deduplicateById<SecondAdmin>(safeParseLocalStorage('gmr_second_admins', []));
     callback(local);
     return () => {};
   }
@@ -167,7 +174,7 @@ export function subscribeSecondAdmins(callback: (admins: SecondAdmin[]) => void)
 // Property CRUD
 export async function savePropertyInDb(property: Property) {
   try {
-    const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+    const local = safeParseLocalStorage<Property[]>('gmr_properties', []);
     const updated = [...local.filter(p => p.id !== property.id), property];
     localStorage.setItem('gmr_properties', JSON.stringify(updated));
   } catch (e) {}
@@ -183,7 +190,7 @@ export async function savePropertyInDb(property: Property) {
 
 export async function deletePropertyInDb(propertyId: string) {
   try {
-    const local: Property[] = JSON.parse(localStorage.getItem('gmr_properties') || '[]');
+    const local = safeParseLocalStorage<Property[]>('gmr_properties', []);
     const updated = local.filter(p => p.id !== propertyId);
     localStorage.setItem('gmr_properties', JSON.stringify(updated));
     localStorage.setItem('gmr_properties_initialized', 'true');
@@ -200,7 +207,7 @@ export async function deletePropertyInDb(propertyId: string) {
 // Tenant CRUD
 export async function saveTenantInDb(tenant: Tenant) {
   try {
-    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const local = safeParseLocalStorage<Tenant[]>('gmr_tenants', []);
     const updated = [...local.filter(t => t.id !== tenant.id), tenant];
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
   } catch (e) {}
@@ -216,7 +223,7 @@ export async function saveTenantInDb(tenant: Tenant) {
 
 export async function updateTenantInDb(tenantId: string, updates: Partial<Tenant>) {
   try {
-    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const local = safeParseLocalStorage<Tenant[]>('gmr_tenants', []);
     const updated = local.map(t => t.id === tenantId ? { ...t, ...updates } : t);
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
   } catch (e) {}
@@ -232,7 +239,7 @@ export async function updateTenantInDb(tenantId: string, updates: Partial<Tenant
 
 export async function deleteTenantInDb(tenantId: string) {
   try {
-    const local: Tenant[] = JSON.parse(localStorage.getItem('gmr_tenants') || '[]');
+    const local = safeParseLocalStorage<Tenant[]>('gmr_tenants', []);
     const updated = local.filter(t => t.id !== tenantId);
     localStorage.setItem('gmr_tenants', JSON.stringify(updated));
   } catch (e) {}
@@ -248,7 +255,7 @@ export async function deleteTenantInDb(tenantId: string) {
 // Payment CRUD
 export async function savePaymentInDb(payment: PaymentLog) {
   try {
-    const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+    const local = safeParseLocalStorage<PaymentLog[]>('gmr_payments', []);
     const updated = [...local.filter(p => p.id !== payment.id), payment];
     localStorage.setItem('gmr_payments', JSON.stringify(updated));
   } catch (e) {}
@@ -264,7 +271,7 @@ export async function savePaymentInDb(payment: PaymentLog) {
 
 export async function deletePaymentInDb(paymentId: string) {
   try {
-    const local: PaymentLog[] = JSON.parse(localStorage.getItem('gmr_payments') || '[]');
+    const local = safeParseLocalStorage<PaymentLog[]>('gmr_payments', []);
     const updated = local.filter(p => p.id !== paymentId);
     localStorage.setItem('gmr_payments', JSON.stringify(updated));
   } catch (e) {}
@@ -280,7 +287,7 @@ export async function deletePaymentInDb(paymentId: string) {
 // Second Admin CRUD
 export async function saveSecondAdminInDb(admin: SecondAdmin) {
   try {
-    const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const local = safeParseLocalStorage<SecondAdmin[]>('gmr_second_admins', []);
     const updated = [...local.filter(a => a.id !== admin.id), admin];
     localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
   } catch (e) {}
@@ -296,7 +303,7 @@ export async function saveSecondAdminInDb(admin: SecondAdmin) {
 
 export async function deleteSecondAdminInDb(adminId: string) {
   try {
-    const local: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const local = safeParseLocalStorage<SecondAdmin[]>('gmr_second_admins', []);
     const updated = local.filter(a => a.id !== adminId);
     localStorage.setItem('gmr_second_admins', JSON.stringify(updated));
   } catch (e) {}
@@ -319,14 +326,12 @@ export function subscribePendingRegistrations(callback: (pending: PendingTenantR
       callback(pending);
     }, (error) => {
       console.warn('Pending registrations snapshot notice:', error?.message || error);
-      const localStr = localStorage.getItem('gmr_pending_registrations');
-      const local = deduplicateById<PendingTenantRegistration>(localStr !== null ? JSON.parse(localStr) : []);
+      const local = deduplicateById<PendingTenantRegistration>(safeParseLocalStorage('gmr_pending_registrations', []));
       callback(local);
     });
   } catch (err) {
     console.warn('Pending registrations subscription error:', err);
-    const localStr = localStorage.getItem('gmr_pending_registrations');
-    const local = deduplicateById<PendingTenantRegistration>(localStr !== null ? JSON.parse(localStr) : []);
+    const local = deduplicateById<PendingTenantRegistration>(safeParseLocalStorage('gmr_pending_registrations', []));
     callback(local);
     return () => {};
   }
@@ -334,7 +339,7 @@ export function subscribePendingRegistrations(callback: (pending: PendingTenantR
 
 export async function savePendingRegistrationInDb(registration: PendingTenantRegistration) {
   try {
-    const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
+    const local = safeParseLocalStorage<PendingTenantRegistration[]>('gmr_pending_registrations', []);
     const updated = [...local.filter(r => r.id !== registration.id), registration];
     localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
   } catch (e) {}
@@ -350,7 +355,7 @@ export async function savePendingRegistrationInDb(registration: PendingTenantReg
 
 export async function deletePendingRegistrationInDb(registrationId: string) {
   try {
-    const local: PendingTenantRegistration[] = JSON.parse(localStorage.getItem('gmr_pending_registrations') || '[]');
+    const local = safeParseLocalStorage<PendingTenantRegistration[]>('gmr_pending_registrations', []);
     const updated = local.filter(r => r.id !== registrationId);
     localStorage.setItem('gmr_pending_registrations', JSON.stringify(updated));
   } catch (e) {}
