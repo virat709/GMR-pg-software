@@ -450,7 +450,7 @@ export default function BillingManager({
               onClick={() => setStatusFilter('Pending')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer ${statusFilter === 'Pending' ? 'bg-white text-neutral-900 shadow-xs' : 'hover:text-neutral-900'}`}
             >
-              {t('overdue')}
+              {t('pendingDues')}
             </button>
             <button 
               onClick={() => setStatusFilter('Overdue')}
