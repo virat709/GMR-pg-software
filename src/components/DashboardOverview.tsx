@@ -107,11 +107,12 @@ export default function DashboardOverview({
 
   // Calculate total rooms available across filtered view
   const totalRoomsForView = activeProperty 
-    ? activeProperty.totalRooms 
-    : properties.reduce((sum, p) => sum + p.totalRooms, 0);
+    ? (activeProperty.totalRooms || 0)
+    : properties.reduce((sum, p) => sum + (p.totalRooms || 0), 0);
 
-  const occupancyRate = totalRoomsForView > 0 
-    ? Math.min(100, Math.round((activeTenants.length / totalRoomsForView) * 100))
+  const safeTotalRooms = Math.max(0, totalRoomsForView);
+  const occupancyRate = safeTotalRooms > 0
+    ? Math.min(100, Math.round((activeTenants.length / safeTotalRooms) * 100))
     : 0;
 
   // Current billing month (dynamic based on current date)
@@ -482,7 +483,8 @@ export default function DashboardOverview({
             });
             const propCollected = propPayments.reduce((sum, p) => sum + p.amount, 0);
             const propTarget = propTenants.reduce((sum, t) => sum + t.rentAmount, 0);
-            const propOccupancy = Math.round((propTenants.length / property.totalRooms) * 100);
+            const safePropRooms = Math.max(1, property.totalRooms || 1);
+            const propOccupancy = Math.min(100, Math.round((propTenants.length / safePropRooms) * 100));
             const isSelected = selectedPropertyId === property.id;
 
             return (

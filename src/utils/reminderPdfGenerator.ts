@@ -97,7 +97,7 @@ export function generateRentReminderPDF({
         alert.billingMonth || 'Current',
         alert.dueDate,
         alert.status.toUpperCase(),
-        `Rs. ${alert.rentAmount.toLocaleString('en-IN')}`
+        `Rs. ${(alert.rentAmount || 0).toLocaleString('en-IN')}`
       ]
     ],
     theme: 'grid',
@@ -136,7 +136,7 @@ export function generateRentReminderPDF({
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rs. ${alert.rentAmount.toLocaleString('en-IN')}/-`, 82, finalY + 12);
+  doc.text(`Rs. ${(alert.rentAmount || 0).toLocaleString('en-IN')}/-`, 82, finalY + 12);
 
   // 6. PAYMENT INSTRUCTIONS
   const footerY = finalY + 24;

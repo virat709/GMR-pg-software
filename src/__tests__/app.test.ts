@@ -241,3 +241,54 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.id).toMatch(/^tenant_/);
   });
 });
+
+describe('Property Fallback & Division Safety Edge Cases', () => {
+  it('resolves valid propertyId fallback when selected ID is empty or invalid', () => {
+    const properties: Property[] = [
+      {
+        id: 'prop_999',
+        name: 'GMR Elite',
+        code: 'ELITE',
+        address: 'Gachibowli',
+        city: 'Hyderabad',
+        totalRooms: 20,
+        totalFloors: 5,
+        contactNumber: '+919951513796',
+        type: 'Co-Living',
+      },
+    ];
+
+    const resolvePropertyId = (selectedId: string): string => {
+      return (selectedId && properties.some(p => p.id === selectedId))
+        ? selectedId
+        : (properties[0]?.id || 'prop_1');
+    };
+
+    expect(resolvePropertyId('')).toBe('prop_999');
+    expect(resolvePropertyId('non_existent')).toBe('prop_999');
+    expect(resolvePropertyId('prop_999')).toBe('prop_999');
+  });
+
+  it('safely handles zero total rooms without division by zero NaN', () => {
+    const totalRooms = 0;
+    const activeTenantsCount = 5;
+
+    const safeTotalRooms = Math.max(0, totalRooms);
+    const occupancyRate = safeTotalRooms > 0
+      ? Math.min(100, Math.round((activeTenantsCount / safeTotalRooms) * 100))
+      : 0;
+
+    expect(occupancyRate).toBe(0);
+    expect(Number.isNaN(occupancyRate)).toBe(false);
+  });
+
+  it('safely formats numerical amounts with fallback when undefined or null', () => {
+    const formatAmount = (amount?: number): string => {
+      return `Rs. ${(amount || 0).toLocaleString('en-IN')}`;
+    };
+
+    expect(formatAmount(15000)).toBe('Rs. 15,000');
+    expect(formatAmount(0)).toBe('Rs. 0');
+    expect(formatAmount(undefined)).toBe('Rs. 0');
+  });
+});

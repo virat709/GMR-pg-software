@@ -151,7 +151,7 @@ export function generate30DayPartnerPDF({
       propCode,
       pay.billingMonth,
       pay.paymentMode,
-      `Rs. ${pay.amount.toLocaleString('en-IN')}`,
+      `Rs. ${(pay.amount || 0).toLocaleString('en-IN')}`,
       pay.referenceId || 'REC-CONFIRMED'
     ];
   });
@@ -206,7 +206,7 @@ export function generate30DayPartnerPDF({
       alert.billingMonth || 'Current',
       alert.dueDate,
       alert.status,
-      `Rs. ${alert.rentAmount.toLocaleString('en-IN')}`
+      `Rs. ${(alert.rentAmount || 0).toLocaleString('en-IN')}`
     ];
   });
 

@@ -136,7 +136,10 @@ export default function TenantDirectory({
   // Open modal for add
   const handleOpenAdd = () => {
     setEditingTenant(null);
-    setPropertyId(selectedPropertyId === 'all' || !selectedPropertyId ? (properties[0]?.id || 'prop_1') : selectedPropertyId);
+    const defaultPropId = selectedPropertyId && selectedPropertyId !== 'all' && properties.some(p => p.id === selectedPropertyId)
+      ? selectedPropertyId
+      : (properties[0]?.id || 'prop_1');
+    setPropertyId(defaultPropId);
     setName('');
     setPhone('');
     setEmail('');
@@ -210,10 +213,14 @@ export default function TenantDirectory({
       return;
     }
 
+    const resolvedPropertyId = properties.some(p => p.id === propertyId)
+      ? propertyId
+      : (properties[0]?.id || propertyId || 'prop_1');
+
     if (editingTenant) {
       onEditTenant({
         ...editingTenant,
-        propertyId,
+        propertyId: resolvedPropertyId,
         name,
         phone,
         email,
@@ -237,7 +244,7 @@ export default function TenantDirectory({
       });
     } else {
       onAddTenant({
-        propertyId,
+        propertyId: resolvedPropertyId,
         name,
         phone,
         email,
