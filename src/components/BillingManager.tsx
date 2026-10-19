@@ -60,6 +60,12 @@ export default function BillingManager({
   showToast = () => {}
 }: BillingManagerProps) {
   const { t } = useLanguage();
+  // Date and month helpers
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const defaultDueDate = `${currentMonth}-05`;
+
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Pending' | 'Overdue'>('All');
@@ -295,12 +301,6 @@ export default function BillingManager({
     // 4. Notify user
     showToast(`Dues Statement PDF downloaded! Attach '${pdfFilename}' in WhatsApp chat.`, 'success');
   };
-
-  // Combined records for searchable billing status (dynamic based on current date)
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const defaultDueDate = `${currentMonth}-05`;
 
   const displayBillingRecords = tenants
     .filter(t => t.status === 'Active' && (!selectedPropertyId || selectedPropertyId === 'all' || t.propertyId === selectedPropertyId))

@@ -33,6 +33,12 @@ export default function TenantSelfRegistrationForm({ properties, onFinish }: Ten
 
   // Form State
   const [selectedPropId, setSelectedPropId] = useState<string>(properties[0]?.id || '');
+
+  React.useEffect(() => {
+    if ((!selectedPropId || !properties.some(p => p.id === selectedPropId)) && properties.length > 0) {
+      setSelectedPropId(properties[0].id);
+    }
+  }, [properties, selectedPropId]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -66,10 +72,15 @@ export default function TenantSelfRegistrationForm({ properties, onFinish }: Ten
     setIsSubmitting(true);
     const propObj = properties.find(p => p.id === selectedPropId);
 
+    const resolvedPropId = (selectedPropId && properties.some(p => p.id === selectedPropId))
+      ? selectedPropId
+      : (properties[0]?.id || 'prop_1');
+    const resolvedPropObj = properties.find(p => p.id === resolvedPropId);
+
     const registration: PendingTenantRegistration = {
       id: 'pending_' + Math.random().toString(36).substring(2, 9),
-      propertyId: selectedPropId || properties[0]?.id || 'prop_1',
-      propertyName: propObj?.name || 'GMR PG Branch',
+      propertyId: resolvedPropId,
+      propertyName: resolvedPropObj?.name || propObj?.name || 'GMR PG Branch',
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
