@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
 import { deduplicateById } from '../lib/firestoreService';
+import { cleanPhoneNumber, getWhatsAppLink } from '../utils/whatsapp';
+
+describe('WhatsApp Helper & Phone Formatting Tests', () => {
+  it('formats 10-digit Indian phone numbers with country code 91', () => {
+    expect(cleanPhoneNumber('9951513796')).toBe('919951513796');
+    expect(cleanPhoneNumber('+91 99515 13796')).toBe('919951513796');
+  });
+
+  it('generates a valid WhatsApp deep link URL with encoded message text', () => {
+    const link = getWhatsAppLink('9951513796', 'Hello GMR PG');
+    expect(link).toBe('https://wa.me/919951513796?text=Hello%20GMR%20PG');
+  });
+});
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
