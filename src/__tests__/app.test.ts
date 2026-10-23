@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
 import { deduplicateById } from '../lib/firestoreService';
+import { cleanPhoneNumber, getWhatsAppLink, getAdmissionTemplate, getRentReminderTemplate } from '../utils/whatsapp';
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
@@ -239,5 +240,44 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.status).toBe('Active');
     expect(newTenant.name).toBe('Alice Johnson');
     expect(newTenant.id).toMatch(/^tenant_/);
+  });
+});
+
+describe('WhatsApp Utilities & Template Tests', () => {
+  it('formats 10-digit phone numbers with 91 prefix correctly', () => {
+    expect(cleanPhoneNumber('9876543210')).toBe('919876543210');
+    expect(cleanPhoneNumber('+91 98765 43210')).toBe('919876543210');
+    expect(cleanPhoneNumber('919876543210')).toBe('919876543210');
+
+    const link = getWhatsAppLink('9876543210', 'Hello World');
+    expect(link).toBe('https://wa.me/919876543210?text=Hello%20World');
+  });
+
+  it('generates valid admission and reminder templates', () => {
+    const admissionMsg = getAdmissionTemplate({
+      tenantName: 'John Doe',
+      roomNumber: '101',
+      checkInDate: '2026-01-01',
+      rentAmount: 8000,
+      securityDeposit: 15000,
+      presentPaid: 15000,
+    });
+
+    expect(admissionMsg).toContain('John Doe');
+    expect(admissionMsg).toContain('Room 101');
+    expect(admissionMsg).toContain('GMR LUXURY CO-LIVING PG');
+
+    const reminderMsg = getRentReminderTemplate({
+      tenantName: 'Jane Smith',
+      roomNumber: '202',
+      rentAmount: 9000,
+      billingMonth: '2026-07',
+      dueDate: '2026-07-05',
+      status: 'Pending',
+    });
+
+    expect(reminderMsg).toContain('Jane Smith');
+    expect(reminderMsg).toContain('Room 202');
+    expect(reminderMsg).toContain('9,000');
   });
 });
