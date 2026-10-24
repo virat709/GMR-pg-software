@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
-import { deduplicateById } from '../lib/firestoreService';
+import { deduplicateById, safeJsonParse } from '../lib/firestoreService';
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
@@ -239,5 +239,22 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.status).toBe('Active');
     expect(newTenant.name).toBe('Alice Johnson');
     expect(newTenant.id).toMatch(/^tenant_/);
+  });
+});
+
+describe('Helper Utility Tests', () => {
+  it('safeJsonParse correctly parses valid JSON and returns fallback on invalid JSON', () => {
+    const validJson = JSON.stringify([{ id: 'prop_1', name: 'GMR' }]);
+    const parsed = safeJsonParse<{ id: string; name: string }[]>(validJson, []);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].name).toBe('GMR');
+
+    const invalidJson = 'invalid{json:data}';
+    const fallback = safeJsonParse<{ id: string; name: string }[]>(invalidJson, [{ id: 'fallback', name: 'Fallback' }]);
+    expect(fallback).toHaveLength(1);
+    expect(fallback[0].id).toBe('fallback');
+
+    const nullResult = safeJsonParse<any[]>(null, []);
+    expect(nullResult).toEqual([]);
   });
 });

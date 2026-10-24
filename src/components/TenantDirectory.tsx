@@ -136,7 +136,8 @@ export default function TenantDirectory({
   // Open modal for add
   const handleOpenAdd = () => {
     setEditingTenant(null);
-    setPropertyId(selectedPropertyId === 'all' || !selectedPropertyId ? (properties[0]?.id || 'prop_1') : selectedPropertyId);
+    const defaultPropId = properties.length > 0 ? properties[0].id : 'prop_1';
+    setPropertyId(selectedPropertyId === 'all' || !selectedPropertyId ? defaultPropId : selectedPropertyId);
     setName('');
     setPhone('');
     setEmail('');
@@ -168,7 +169,8 @@ export default function TenantDirectory({
   const handleOpenEdit = (tenant: Tenant, e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid selecting row
     setEditingTenant(tenant);
-    setPropertyId(tenant.propertyId || 'prop_1');
+    const defaultPropId = properties.length > 0 ? properties[0].id : 'prop_1';
+    setPropertyId(tenant.propertyId || defaultPropId);
     setName(tenant.name);
     setPhone(tenant.phone);
     setEmail(tenant.email);
