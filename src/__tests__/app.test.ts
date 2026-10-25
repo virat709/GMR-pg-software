@@ -241,3 +241,47 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.id).toMatch(/^tenant_/);
   });
 });
+
+describe('Dynamic Month Formatting & Partner Statement Calculations', () => {
+  it('formats current month correctly in YYYY-MM format', () => {
+    const testDate = new Date('2026-05-15');
+    const monthStr = `${testDate.getFullYear()}-${String(testDate.getMonth() + 1).padStart(2, '0')}`;
+    const monthLabel = testDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    expect(monthStr).toBe('2026-05');
+    expect(monthLabel).toBe('May 2026');
+  });
+
+  it('correctly calculates 30-day partner statement totals for paid transactions and dues', () => {
+    const now = new Date('2026-04-15');
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    const payments: PaymentLog[] = [
+      { id: 'p1', tenantId: 't1', amount: 8000, billingMonth: '2026-04', paymentDate: '2026-04-02', paymentMode: 'UPI', referenceId: 'REF1' },
+      { id: 'p2', tenantId: 't2', amount: 9000, billingMonth: '2026-04', paymentDate: '2026-03-20', paymentMode: 'Cash', referenceId: 'REF2' },
+      { id: 'p3', tenantId: 't1', amount: 8000, billingMonth: '2026-02', paymentDate: '2026-02-01', paymentMode: 'UPI', referenceId: 'REF3' }, // Outside 30 days
+    ];
+
+    const alerts: BillingAlert[] = [
+      { tenantId: 't3', tenantName: 'Charlie', roomNumber: '103', rentAmount: 7500, billingMonth: '2026-04', status: 'Pending', dueDate: '2026-04-05' },
+      { tenantId: 't4', tenantName: 'David', roomNumber: '104', rentAmount: 8500, billingMonth: '2026-04', status: 'Overdue', dueDate: '2026-04-05' },
+      { tenantId: 't1', tenantName: 'Alice', roomNumber: '101', rentAmount: 8000, billingMonth: '2026-04', status: 'Paid', dueDate: '2026-04-05' },
+    ];
+
+    const last30DaysPayments = payments.filter(p => {
+      const d = new Date(p.paymentDate);
+      return d >= thirtyDaysAgo && d <= now;
+    });
+
+    const pendingAlerts = alerts.filter(a => a.status === 'Pending' || a.status === 'Overdue');
+
+    const totalCollected = last30DaysPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalDues = pendingAlerts.reduce((sum, a) => sum + a.rentAmount, 0);
+
+    expect(last30DaysPayments).toHaveLength(2);
+    expect(totalCollected).toBe(17000);
+    expect(pendingAlerts).toHaveLength(2);
+    expect(totalDues).toBe(16000);
+  });
+});
