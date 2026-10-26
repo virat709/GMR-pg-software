@@ -85,6 +85,24 @@ Regards,
 /**
  * 2. Payment receipt confirmation template (Formatted as an official digital printed slip)
  */
+/**
+ * Safely formats YYYY-MM billing month into "Month Year" (e.g. "July 2026")
+ */
+export function formatBillingMonth(billingMonth: string): string {
+  if (!billingMonth) return 'Current Month';
+  const match = /^(\d{4})-(\d{2})$/.exec(billingMonth.trim());
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const d = new Date(year, month, 1);
+    if (!isNaN(d.getTime())) {
+      const formatted = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+      if (formatted && formatted !== 'Invalid Date') return formatted;
+    }
+  }
+  return billingMonth;
+}
+
 export function getReceiptTemplate(data: {
   tenantName: string;
   roomNumber: string;
@@ -96,8 +114,9 @@ export function getReceiptTemplate(data: {
   propertyName?: string;
   propertyAddress?: string;
 }): string {
-  const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
-  const receiptNo = `GMR-RCPT-${data.referenceId.replace(/\D/g, '').slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
+  const monthName = formatBillingMonth(data.billingMonth);
+  const cleanRef = (data.referenceId || '').replace(/\D/g, '');
+  const receiptNo = `GMR-RCPT-${cleanRef.slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
   const branchHeader = data.propertyName ? `*${data.propertyName.toUpperCase()}*` : '*GMR LUXURY CO-LIVING PG*';
   const branchAddr = data.propertyAddress || '#7 Akash Nagar Main Road, Mahadevapura, Bengaluru / Madhapur, Hyderabad';
 
@@ -147,8 +166,8 @@ export function getRentReminderTemplate(data: {
   status: string;
   propertyName?: string;
 }): string {
-  const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
-  const isOverdue = data.status.toLowerCase() === 'overdue';
+  const monthName = formatBillingMonth(data.billingMonth);
+  const isOverdue = (data.status || '').toLowerCase() === 'overdue';
   const alertIcon = isOverdue ? '🚨' : '⚠️';
   const statusLabel = isOverdue ? '*OVERDUE*' : '*PENDING*';
   const branchName = data.propertyName ? `*${data.propertyName}*` : '*GMR Luxury Co-Living PG*';

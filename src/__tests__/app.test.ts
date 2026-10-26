@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
 import { deduplicateById } from '../lib/firestoreService';
+import { formatBillingMonth, cleanPhoneNumber, getWhatsAppLink, getReceiptTemplate, getRentReminderTemplate } from '../utils/whatsapp';
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
@@ -239,5 +240,62 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.status).toBe('Active');
     expect(newTenant.name).toBe('Alice Johnson');
     expect(newTenant.id).toMatch(/^tenant_/);
+  });
+});
+
+describe('WhatsApp Notification Utilities & Date Formatter Tests', () => {
+  it('formats YYYY-MM billing months correctly', () => {
+    expect(formatBillingMonth('2026-07')).toBe('July 2026');
+    expect(formatBillingMonth('2025-12')).toBe('December 2025');
+  });
+
+  it('handles invalid or empty billing month input safely', () => {
+    expect(formatBillingMonth('')).toBe('Current Month');
+    expect(formatBillingMonth('invalid-date')).toBe('invalid-date');
+  });
+
+  it('cleans phone numbers and builds valid WhatsApp links', () => {
+    expect(cleanPhoneNumber('9876543210')).toBe('919876543210');
+    expect(cleanPhoneNumber('+91 98765 43210')).toBe('919876543210');
+    expect(cleanPhoneNumber('919876543210')).toBe('919876543210');
+
+    const link = getWhatsAppLink('9876543210', 'Hello GMR');
+    expect(link).toBe('https://wa.me/919876543210?text=Hello%20GMR');
+  });
+
+  it('generates WhatsApp payment receipt template without throwing NaN/Invalid Date', () => {
+    const template = getReceiptTemplate({
+      tenantName: 'John Doe',
+      roomNumber: '101',
+      amount: 8000,
+      billingMonth: '2026-07',
+      paymentDate: '2026-07-02',
+      paymentMode: 'UPI',
+      referenceId: 'UPI12345678',
+      propertyName: 'GMR Prime PG'
+    });
+
+    expect(template).toContain('OFFICIAL RENT PAYMENT RECEIPT');
+    expect(template).toContain('John Doe');
+    expect(template).toContain('July 2026');
+    expect(template).not.toContain('NaN');
+    expect(template).not.toContain('Invalid Date');
+  });
+
+  it('generates WhatsApp rent reminder template correctly', () => {
+    const template = getRentReminderTemplate({
+      tenantName: 'Jane Smith',
+      roomNumber: '202',
+      rentAmount: 9000,
+      billingMonth: '2026-07',
+      dueDate: '2026-07-05',
+      status: 'Overdue',
+      propertyName: 'GMR Luxury Co-Living'
+    });
+
+    expect(template).toContain('RENT DUES REMINDER');
+    expect(template).toContain('OVERDUE');
+    expect(template).toContain('Jane Smith');
+    expect(template).toContain('July 2026');
   });
 });
