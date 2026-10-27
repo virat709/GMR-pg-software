@@ -26,6 +26,7 @@ export function generate30DayPartnerPDF({
   const now = new Date();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(now.getDate() - 30);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
 
   // Filter tenants by property if selected
   const targetTenants = selectedPropertyId === 'all'
@@ -46,8 +47,8 @@ export function generate30DayPartnerPDF({
   const targetAlerts = billingAlerts.filter(b => targetTenantIds.has(b.tenantId) && (b.status === 'Pending' || b.status === 'Overdue'));
 
   // Amounts
-  const totalCollectedAmount = last30DaysPayments.reduce((sum, p) => sum + p.amount, 0);
-  const totalDuesAmount = targetAlerts.reduce((sum, b) => sum + b.rentAmount, 0);
+  const totalCollectedAmount = last30DaysPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const totalDuesAmount = targetAlerts.reduce((sum, b) => sum + Number(b.rentAmount || 0), 0);
 
   const propertyNameLabel = selectedPropertyId === 'all'
     ? 'All Properties (Global Portfolio)'
@@ -151,7 +152,7 @@ export function generate30DayPartnerPDF({
       propCode,
       pay.billingMonth,
       pay.paymentMode,
-      `Rs. ${pay.amount.toLocaleString('en-IN')}`,
+      `Rs. ${Number(pay.amount || 0).toLocaleString('en-IN')}`,
       pay.referenceId || 'REC-CONFIRMED'
     ];
   });
@@ -206,7 +207,7 @@ export function generate30DayPartnerPDF({
       alert.billingMonth || 'Current',
       alert.dueDate,
       alert.status,
-      `Rs. ${alert.rentAmount.toLocaleString('en-IN')}`
+      `Rs. ${Number(alert.rentAmount || 0).toLocaleString('en-IN')}`
     ];
   });
 

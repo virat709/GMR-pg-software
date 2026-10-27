@@ -83,6 +83,21 @@ Regards,
 }
 
 /**
+ * Helper to safely format billing month (e.g. "2026-07" -> "July 2026")
+ */
+export function formatBillingMonth(billingMonth: string): string {
+  if (!billingMonth) return '';
+  if (!/^\d{4}-\d{2}$/.test(billingMonth)) {
+    return billingMonth;
+  }
+  const dateObj = new Date(`${billingMonth}-02`);
+  if (!isNaN(dateObj.getTime())) {
+    return dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+  }
+  return billingMonth;
+}
+
+/**
  * 2. Payment receipt confirmation template (Formatted as an official digital printed slip)
  */
 export function getReceiptTemplate(data: {
@@ -96,8 +111,8 @@ export function getReceiptTemplate(data: {
   propertyName?: string;
   propertyAddress?: string;
 }): string {
-  const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
-  const receiptNo = `GMR-RCPT-${data.referenceId.replace(/\D/g, '').slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
+  const monthName = formatBillingMonth(data.billingMonth) || data.billingMonth || '';
+  const receiptNo = `GMR-RCPT-${(data.referenceId || '').replace(/\D/g, '').slice(-6) || Math.floor(100000 + Math.random() * 900000)}`;
   const branchHeader = data.propertyName ? `*${data.propertyName.toUpperCase()}*` : '*GMR LUXURY CO-LIVING PG*';
   const branchAddr = data.propertyAddress || '#7 Akash Nagar Main Road, Mahadevapura, Bengaluru / Madhapur, Hyderabad';
 
@@ -147,7 +162,7 @@ export function getRentReminderTemplate(data: {
   status: string;
   propertyName?: string;
 }): string {
-  const monthName = new Date(data.billingMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' }) || data.billingMonth;
+  const monthName = formatBillingMonth(data.billingMonth) || data.billingMonth || '';
   const isOverdue = data.status.toLowerCase() === 'overdue';
   const alertIcon = isOverdue ? '🚨' : '⚠️';
   const statusLabel = isOverdue ? '*OVERDUE*' : '*PENDING*';

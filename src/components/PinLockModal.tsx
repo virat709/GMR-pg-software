@@ -16,7 +16,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { UserRole, SecondAdmin } from '../types';
-import { saveSecondAdminInDb, deleteSecondAdminInDb } from '../lib/firestoreService';
+import { saveSecondAdminInDb, deleteSecondAdminInDb, safeJsonParse } from '../lib/firestoreService';
 import { auth } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -56,7 +56,7 @@ export default function PinLockModal({
 
   // Sync props and localStorage on mount / prop update
   useEffect(() => {
-    const savedLocal: SecondAdmin[] = JSON.parse(localStorage.getItem('gmr_second_admins') || '[]');
+    const savedLocal: SecondAdmin[] = safeJsonParse(localStorage.getItem('gmr_second_admins'), []);
     const mergedMap = new Map<string, SecondAdmin>();
 
     // Add Firestore admins
