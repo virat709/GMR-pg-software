@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
-import { deduplicateById } from '../lib/firestoreService';
+import { deduplicateById, safeJsonParse } from '../lib/firestoreService';
+import { cleanPhoneNumber, formatBillingMonth, getReceiptTemplate, getRentReminderTemplate } from '../utils/whatsapp';
 
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
@@ -239,5 +240,59 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.status).toBe('Active');
     expect(newTenant.name).toBe('Alice Johnson');
     expect(newTenant.id).toMatch(/^tenant_/);
+  });
+});
+
+describe('Safe JSON Parsing & Resilience Tests', () => {
+  it('returns fallback value on null, undefined, or malformed JSON', () => {
+    const fallbackObj = [{ id: 'fallback_1' }];
+    expect(safeJsonParse(null, fallbackObj)).toEqual(fallbackObj);
+    expect(safeJsonParse('', fallbackObj)).toEqual(fallbackObj);
+    expect(safeJsonParse('{ corrupted json ...', fallbackObj)).toEqual(fallbackObj);
+  });
+
+  it('correctly parses valid JSON string', () => {
+    const validJson = JSON.stringify([{ id: 'prop_99', name: 'Test PG' }]);
+    const parsed = safeJsonParse(validJson, []);
+    expect(parsed).toEqual([{ id: 'prop_99', name: 'Test PG' }]);
+  });
+});
+
+describe('WhatsApp Formatting & Date Safety Tests', () => {
+  it('cleans 10-digit phone numbers and prepends India country code 91', () => {
+    expect(cleanPhoneNumber('9951513796')).toBe('919951513796');
+    expect(cleanPhoneNumber('+91 99515 13796')).toBe('919951513796');
+    expect(cleanPhoneNumber('919951513796')).toBe('919951513796');
+  });
+
+  it('safely formats valid and invalid billing month strings', () => {
+    expect(formatBillingMonth('2026-07')).toContain('July 2026');
+    expect(formatBillingMonth('invalid-date')).toBe('invalid-date');
+    expect(formatBillingMonth('')).toBe('');
+  });
+
+  it('generates receipt and reminder WhatsApp templates without throwing RangeError on unusual dates', () => {
+    const receiptTemplate = getReceiptTemplate({
+      tenantName: 'Sam Miller',
+      roomNumber: '101',
+      amount: 8000,
+      billingMonth: '2026-07',
+      paymentDate: '2026-07-02',
+      paymentMode: 'UPI',
+      referenceId: 'UPI123456789'
+    });
+    expect(receiptTemplate).toContain('Sam Miller');
+    expect(receiptTemplate).toContain('July 2026');
+
+    const reminderTemplate = getRentReminderTemplate({
+      tenantName: 'Sam Miller',
+      roomNumber: '101',
+      rentAmount: 8000,
+      billingMonth: 'invalid-month',
+      dueDate: '2026-07-05',
+      status: 'Overdue'
+    });
+    expect(reminderTemplate).toContain('Sam Miller');
+    expect(reminderTemplate).toContain('OVERDUE');
   });
 });

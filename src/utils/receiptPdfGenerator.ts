@@ -99,7 +99,7 @@ export function generateReceiptPDF({
         `Room Rent (${payment.billingMonth})\nIncludes standard maintenance & Wi-Fi`,
         payment.billingMonth,
         payment.paymentMode,
-        `Rs. ${payment.amount.toLocaleString('en-IN')}`
+        `Rs. ${Number(payment.amount || 0).toLocaleString('en-IN')}`
       ]
     ],
     theme: 'grid',
@@ -137,7 +137,7 @@ export function generateReceiptPDF({
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rs. ${payment.amount.toLocaleString('en-IN')}/-`, 82, finalY + 12);
+  doc.text(`Rs. ${Number(payment.amount || 0).toLocaleString('en-IN')}/-`, 82, finalY + 12);
 
   // 6. SIGNATURE & STAMP FOOTER
   const footerY = finalY + 24;
