@@ -2,6 +2,34 @@ import { describe, it, expect } from 'vitest';
 import { Property, Tenant, PaymentLog, PendingTenantRegistration, BillingAlert } from '../types';
 import { deduplicateById } from '../lib/firestoreService';
 
+describe('Firestore Data Cleaning Helper Tests', () => {
+  function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
+    const clean: Record<string, any> = {};
+    Object.keys(obj).forEach((key) => {
+      const val = obj[key];
+      if (val !== undefined) {
+        clean[key] = val;
+      }
+    });
+    return clean;
+  }
+
+  it('removes undefined properties from payloads before saving to Firestore', () => {
+    const dirtyPayload = {
+      id: 'tenant_123',
+      name: 'John Doe',
+      email: undefined,
+      phone: '9876543210',
+      checkOutDate: null, // null should be preserved in Firestore
+    };
+
+    const cleaned = cleanForFirestore(dirtyPayload);
+    expect(cleaned).toHaveProperty('name', 'John Doe');
+    expect(cleaned).toHaveProperty('checkOutDate', null);
+    expect(cleaned).not.toHaveProperty('email');
+  });
+});
+
 describe('Property Management & Deduplication Tests', () => {
   it('deduplicates entities by id correctly', () => {
     const rawProperties: Property[] = [
