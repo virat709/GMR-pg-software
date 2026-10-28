@@ -2,6 +2,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Property, Tenant, PaymentLog, BillingAlert } from '../types';
 
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
 export interface PartnerStatementData {
   properties: Property[];
   tenants: Tenant[];
@@ -185,7 +191,8 @@ export function generate30DayPartnerPDF({
   });
 
   // 6. PENDING DUES / UNPAID PEOPLE LIST (ADDED AT THE VERY LAST)
-  const paidTableFinalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 12 : barY + 70;
+  const docWithAutoTable = doc as jsPDFWithAutoTable;
+  const paidTableFinalY = docWithAutoTable.lastAutoTable ? docWithAutoTable.lastAutoTable.finalY + 12 : barY + 70;
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -238,7 +245,7 @@ export function generate30DayPartnerPDF({
   });
 
   // 7. PARTNER CONFIRMATION FOOTER
-  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFillColor(248, 250, 252);

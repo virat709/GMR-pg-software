@@ -2,6 +2,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PaymentLog } from '../types';
 
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
 export interface SingleReceiptPdfData {
   payment: PaymentLog;
   tenantName: string;
@@ -122,7 +128,8 @@ export function generateReceiptPDF({
     margin: { left: 10, right: 10 }
   });
 
-  const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 5 : 100;
+  const docWithAutoTable = doc as jsPDFWithAutoTable;
+  const finalY = docWithAutoTable.lastAutoTable ? docWithAutoTable.lastAutoTable.finalY + 5 : 100;
 
   // 5. TOTAL & TRANSACTION ID CARD
   doc.setFillColor(240, 253, 244);

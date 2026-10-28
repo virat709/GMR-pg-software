@@ -1,6 +1,12 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { UserOptions } from 'jspdf-autotable';
 import { BillingAlert } from '../types';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
 
 export interface RentReminderPdfData {
   alert: BillingAlert;
@@ -121,7 +127,8 @@ export function generateRentReminderPDF({
     margin: { left: 10, right: 10 }
   });
 
-  const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 5 : 100;
+  const docWithAutoTable = doc as jsPDFWithAutoTable;
+  const finalY = docWithAutoTable.lastAutoTable ? docWithAutoTable.lastAutoTable.finalY + 5 : 100;
 
   // 5. TOTAL PAYABLE HIGHLIGHT CARD
   doc.setFillColor(isOverdue ? 254 : 254, isOverdue ? 242 : 243, isOverdue ? 242 : 199);
