@@ -178,6 +178,56 @@ describe('Rent & Billing Status Calculation Tests', () => {
     expect(newPayment.billingMonth).toBe('2026-06');
     expect(newPayment.paymentDate).toBe('2026-07-02');
   });
+
+  it('calculates remaining unpaid rent accurately for partial payments in billing alerts', () => {
+    const tenant: Tenant = {
+      id: 'tenant_partial',
+      propertyId: 'prop_1',
+      name: 'Michael Scott',
+      phone: '9876500000',
+      email: 'michael@example.com',
+      roomNumber: '201',
+      rentAmount: 10000,
+      securityDeposit: 15000,
+      presentPaid: 15000,
+      idType: 'Aadhaar',
+      idNumber: '111122223333',
+      checkInDate: '2026-01-01',
+      checkOutDate: null,
+      status: 'Active',
+      fatherName: 'Father Scott',
+      age: 30,
+      dob: '1996-01-01',
+      educationalQualification: 'MBA',
+      employment: 'Manager',
+      officeAddress: 'Scranton',
+      permanentAddress: 'Pennsylvania',
+      familyContactNumber: '9876500001',
+      aadharNo: '111122223333',
+      panNo: '',
+    };
+
+    const partialPayment: PaymentLog = {
+      id: 'pay_partial_1',
+      tenantId: 'tenant_partial',
+      amount: 6000,
+      billingMonth: '2026-07',
+      paymentDate: '2026-07-01',
+      paymentMode: 'UPI',
+      referenceId: 'UPIPARTIAL01',
+    };
+
+    const currentMonth = '2026-07';
+    const tenantPayments = [partialPayment].filter(p => p.tenantId === tenant.id && p.billingMonth === currentMonth);
+    const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    const remainingRent = Math.max(0, tenant.rentAmount - totalPaid);
+    const isPaid = totalPaid >= tenant.rentAmount;
+
+    expect(totalPaid).toBe(6000);
+    expect(remainingRent).toBe(4000);
+    expect(isPaid).toBe(false);
+  });
 });
 
 describe('Pending Self-Registration Approval Tests', () => {

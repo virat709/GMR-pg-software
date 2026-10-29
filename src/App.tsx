@@ -354,7 +354,7 @@ function MainContent() {
         propertyId: tenant.propertyId,
         tenantName: tenant.name,
         roomNumber: tenant.roomNumber,
-        rentAmount: tenant.rentAmount,
+        rentAmount: Math.max(0, tenant.rentAmount - totalPaid),
         billingMonth: currentMonth,
         status,
         dueDate
