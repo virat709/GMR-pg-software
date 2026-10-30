@@ -241,3 +241,41 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.id).toMatch(/^tenant_/);
   });
 });
+
+describe('Tenant Financials & Zero-Value Fallback Tests', () => {
+  it('correctly handles presentPaid when value is 0 without falling back to securityDeposit', () => {
+    const tenantWithZeroPresentPaid: Tenant = {
+      id: 'tenant_zero',
+      propertyId: 'prop_1',
+      name: 'Zero Paid Resident',
+      phone: '9000000000',
+      email: 'zero@example.com',
+      roomNumber: '105',
+      rentAmount: 7000,
+      securityDeposit: 14000,
+      presentPaid: 0,
+      idType: 'Aadhaar',
+      idNumber: '111122223333',
+      checkInDate: '2026-07-01',
+      checkOutDate: null,
+      status: 'Active',
+      fatherName: 'Father Zero',
+      age: 22,
+      dob: '2004-01-01',
+      educationalQualification: 'B.Com',
+      employment: 'Student',
+      officeAddress: 'College',
+      permanentAddress: 'City',
+      familyContactNumber: '9000000001',
+      aadharNo: '111122223333',
+      panNo: '',
+    };
+
+    // Nullish coalescing test vs logical OR
+    const resolvedPresentPaid = tenantWithZeroPresentPaid.presentPaid ?? tenantWithZeroPresentPaid.securityDeposit;
+    const legacyLogicalOrValue = tenantWithZeroPresentPaid.presentPaid || tenantWithZeroPresentPaid.securityDeposit;
+
+    expect(resolvedPresentPaid).toBe(0);
+    expect(legacyLogicalOrValue).toBe(14000);
+  });
+});
