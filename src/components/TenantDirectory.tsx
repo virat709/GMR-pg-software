@@ -175,7 +175,7 @@ export default function TenantDirectory({
     setRoomNumber(tenant.roomNumber);
     setRentAmount(tenant.rentAmount);
     setSecurityDeposit(tenant.securityDeposit);
-    setPresentPaid(tenant.presentPaid || tenant.securityDeposit);
+    setPresentPaid(tenant.presentPaid ?? tenant.securityDeposit);
     setIdType(tenant.idType);
     setIdNumber(tenant.idNumber);
     setCheckInDate(tenant.checkInDate);
@@ -617,7 +617,7 @@ export default function TenantDirectory({
 
                   <div className="p-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl">
                     <span className="text-[9px] text-emerald-600 block font-bold uppercase">Present Paid</span>
-                    <span className="text-sm font-bold text-emerald-800">₹{(currentTenant.presentPaid || currentTenant.securityDeposit).toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-bold text-emerald-800">₹{(currentTenant.presentPaid ?? currentTenant.securityDeposit).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -760,7 +760,7 @@ export default function TenantDirectory({
                     checkInDate: currentTenant.checkInDate,
                     rentAmount: currentTenant.rentAmount,
                     securityDeposit: currentTenant.securityDeposit,
-                    presentPaid: currentTenant.presentPaid || currentTenant.securityDeposit
+                    presentPaid: currentTenant.presentPaid ?? currentTenant.securityDeposit
                   });
                   triggerWhatsAppMessage(currentTenant.phone, text);
                 }}
@@ -1142,7 +1142,7 @@ export default function TenantDirectory({
                       checkInDate: currentTenant.checkInDate,
                       rentAmount: currentTenant.rentAmount,
                       securityDeposit: currentTenant.securityDeposit,
-                      presentPaid: currentTenant.presentPaid || currentTenant.securityDeposit
+                      presentPaid: currentTenant.presentPaid ?? currentTenant.securityDeposit
                     });
                     triggerWhatsAppMessage(currentTenant.phone, text);
                   }}
@@ -1282,7 +1282,7 @@ export default function TenantDirectory({
                   </div>
                   <div className="grid grid-cols-3 border-b border-neutral-100 pb-1.5">
                     <span className="font-bold text-neutral-500 col-span-1">Present Paid</span>
-                    <span className="text-emerald-700 font-bold col-span-2">: ₹{(currentTenant.presentPaid || currentTenant.securityDeposit).toLocaleString('en-IN')}/-</span>
+                    <span className="text-emerald-700 font-bold col-span-2">: ₹{(currentTenant.presentPaid ?? currentTenant.securityDeposit).toLocaleString('en-IN')}/-</span>
                   </div>
                   <div className="grid grid-cols-3 border-b border-neutral-100 pb-1.5">
                     <span className="font-bold text-neutral-500 col-span-1">Check-In Date</span>
