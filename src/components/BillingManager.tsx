@@ -744,7 +744,7 @@ export default function BillingManager({
                 <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Payment Notes</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. July Rent Paid fully"
+                  placeholder="e.g. Monthly rent paid in full"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   className="w-full px-3.5 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50"
