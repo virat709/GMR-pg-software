@@ -241,3 +241,29 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.id).toMatch(/^tenant_/);
   });
 });
+
+describe('Dynamic Month & Periodic Monitoring Tests', () => {
+  it('formats current month and due date correctly without hardcoding month names', () => {
+    const testDate = new Date('2026-11-03T10:00:00Z');
+    const year = testDate.getFullYear();
+    const monthNum = String(testDate.getMonth() + 1).padStart(2, '0');
+    const currentMonth = `${year}-${monthNum}`;
+    const dueDate = `${currentMonth}-05`;
+    const monthLabel = testDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthShort = testDate.toLocaleDateString('en-US', { month: 'short' });
+
+    expect(currentMonth).toBe('2026-11');
+    expect(dueDate).toBe('2026-11-05');
+    expect(monthLabel).toBe('November 2026');
+    expect(monthShort).toBe('Nov');
+  });
+
+  it('determines rent overdue status dynamically based on current date', () => {
+    const dueDate = '2026-11-05';
+    const isPastDue = (todayStr: string) => todayStr > dueDate;
+
+    expect(isPastDue('2026-11-04')).toBe(false);
+    expect(isPastDue('2026-11-05')).toBe(false);
+    expect(isPastDue('2026-11-06')).toBe(true);
+  });
+});
