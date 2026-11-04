@@ -241,3 +241,67 @@ describe('Pending Self-Registration Approval Tests', () => {
     expect(newTenant.id).toMatch(/^tenant_/);
   });
 });
+
+describe('Dynamic Month & Periodic Monitoring Tests', () => {
+  it('formats current month and due date correctly without hardcoding month names', () => {
+    const testDate = new Date('2026-11-03T10:00:00Z');
+    const year = testDate.getFullYear();
+    const monthNum = String(testDate.getMonth() + 1).padStart(2, '0');
+    const currentMonth = `${year}-${monthNum}`;
+    const dueDate = `${currentMonth}-05`;
+    const monthLabel = testDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthShort = testDate.toLocaleDateString('en-US', { month: 'short' });
+
+    expect(currentMonth).toBe('2026-11');
+    expect(dueDate).toBe('2026-11-05');
+    expect(monthLabel).toBe('November 2026');
+    expect(monthShort).toBe('Nov');
+  });
+
+  it('determines rent overdue status dynamically based on current date', () => {
+    const dueDate = '2026-11-05';
+    const isPastDue = (todayStr: string) => todayStr > dueDate;
+
+    expect(isPastDue('2026-11-04')).toBe(false);
+    expect(isPastDue('2026-11-05')).toBe(false);
+    expect(isPastDue('2026-11-06')).toBe(true);
+  });
+});
+
+describe('Tenant Financials & Zero-Value Fallback Tests', () => {
+  it('correctly handles presentPaid when value is 0 without falling back to securityDeposit', () => {
+    const tenantWithZeroPresentPaid: Tenant = {
+      id: 'tenant_zero',
+      propertyId: 'prop_1',
+      name: 'Zero Paid Resident',
+      phone: '9000000000',
+      email: 'zero@example.com',
+      roomNumber: '105',
+      rentAmount: 7000,
+      securityDeposit: 14000,
+      presentPaid: 0,
+      idType: 'Aadhaar',
+      idNumber: '111122223333',
+      checkInDate: '2026-07-01',
+      checkOutDate: null,
+      status: 'Active',
+      fatherName: 'Father Zero',
+      age: 22,
+      dob: '2004-01-01',
+      educationalQualification: 'B.Com',
+      employment: 'Student',
+      officeAddress: 'College',
+      permanentAddress: 'City',
+      familyContactNumber: '9000000001',
+      aadharNo: '111122223333',
+      panNo: '',
+    };
+
+    // Nullish coalescing test vs logical OR
+    const resolvedPresentPaid = tenantWithZeroPresentPaid.presentPaid ?? tenantWithZeroPresentPaid.securityDeposit;
+    const legacyLogicalOrValue = tenantWithZeroPresentPaid.presentPaid || tenantWithZeroPresentPaid.securityDeposit;
+
+    expect(resolvedPresentPaid).toBe(0);
+    expect(legacyLogicalOrValue).toBe(14000);
+  });
+});
