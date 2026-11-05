@@ -118,6 +118,7 @@ export default function DashboardOverview({
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const currentMonthShort = now.toLocaleDateString('en-US', { month: 'short' });
 
   // Filter payments for filtered tenants
   const filteredTenantIds = new Set(filteredTenants.map(t => t.id));
@@ -566,7 +567,7 @@ export default function DashboardOverview({
                   <div className="flex justify-between items-center text-xs pt-1">
                     <div>
                       <span className={`text-[10px] block uppercase font-bold tracking-wider ${isSelected ? 'text-neutral-400' : 'text-neutral-400'}`}>
-                        Rent Recd (July)
+                        Rent Recd ({currentMonthShort})
                       </span>
                       <span className={`font-extrabold text-sm ${isSelected ? 'text-white' : 'text-neutral-900'}`}>
                         ₹{propCollected.toLocaleString('en-IN')}
@@ -602,14 +603,14 @@ export default function DashboardOverview({
           <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
               <div className="space-y-0.5">
-                <h2 className="text-lg font-bold text-neutral-900">July Rent Roll & Overdues</h2>
+                <h2 className="text-lg font-bold text-neutral-900">{currentMonthShort} Rent Roll & Overdues</h2>
                 <p className="text-xs text-neutral-500">
                   {activeProperty ? `Rents due for ${activeProperty.name}` : 'Rents due across all branches'}
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                Due July 5
+                Due {currentMonthShort} 5
               </span>
             </div>
 
@@ -617,7 +618,7 @@ export default function DashboardOverview({
               {filteredBillingAlerts.length === 0 ? (
                 <div className="text-center py-8 text-neutral-400">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
-                  <p className="text-sm font-medium">All residents are fully paid up for July!</p>
+                  <p className="text-sm font-medium">All residents are fully paid up for {currentMonthLabel}!</p>
                 </div>
               ) : (
                 filteredBillingAlerts.map((alert) => {
